@@ -1,0 +1,12 @@
+{
+    "configurations": [
+        {
+            "name": "CUDA C++ Debug Launch",
+            "type": "cuda-gdb",
+            "request": "launch",
+            "program":  "${workspaceFolder}/DAS_dbg.exe",
+            "stopAtEntry": false,
+        }
+    ]
+    
+}

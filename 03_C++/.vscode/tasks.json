@@ -1,0 +1,86 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "type": "cppbuild",
+            "label": "Full Build with NVCC v11.7.99",
+            "command": "nvcc.exe",
+            "args": [
+                "ConstructDAS.cpp",
+                "dataset.cpp",
+                "DAS.cpp",
+                "ImageArea.cpp",
+                "CUDADAS.cu",
+                "-O3",
+                "-o",
+                "DAS.exe",
+                "-L",
+                "C:/Program Files/MATLAB/R2022b/extern/lib/win64/microsoft",
+                "-l",
+                "libmat",
+                "-l",
+                "libmx"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            },
+            "detail": "compiler: C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.7\\bin\\nvcc.exe"
+        },
+
+        {
+            "type": "cppbuild",
+            "label": "Debug Build with NVCC v11.7.99",
+            "command": "nvcc.exe",
+            "args": [
+                "ConstructDAS.cpp",
+                "dataset.cpp",
+                "DAS.cpp",
+                "ImageArea.cpp",
+                "CUDADAS.cu",
+                "-g",
+                "-G",
+                "-o",
+                "DAS_debug.exe",
+                "-L",
+                "C:/Program Files/MATLAB/R2022b/extern/lib/win64/microsoft",
+                "-l",
+                "libmat",
+                "-l",
+                "libmx"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": [
+                "$nvcc"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": false,
+            },
+            "detail": "compiler: C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.7\\bin\\nvcc.exe"
+        },
+
+        {
+            "label":"Build for Debug",
+            "type":"shell",
+            "command": ["make debug run"],
+            "problemMatcher": [
+                "$nvcc"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true,
+            }
+
+        },
+
+    ]
+}

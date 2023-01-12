@@ -1,0 +1,39 @@
+{
+    "configurations": [
+        {
+            "name": "Win32",
+            "includePath": [
+                "${workspaceFolder}/*"
+            ],
+            "defines": [
+                "_DEBUG",
+                "UNICODE",
+                "_UNICODE"
+            ],
+            "windowsSdkVersion": "10.0.19041.0",
+            "compilerPath": "/mnt/c/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v11.8/bin/nvcc.exe",
+            "compilerArgs": [
+                "ConstructDAS.cpp",
+                "dataset.cpp",
+                "DAS.cpp",
+                "ImageArea.cpp",
+                "CUDADAS.cu",
+                "-g",
+                "-G",
+                "-o",
+                "DAS_debug.exe",
+                "-L",
+                "C:/Program Files/MATLAB/R2022b/extern/lib/win64/microsoft",
+                "-l",
+                "libmat",
+                "-l",
+                "libmx"
+            ],
+            "cStandard": "c17",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "${default}",
+            "configurationProvider": "ms-vscode.makefile-tools"
+        }
+    ],
+    "version": 4
+}
