@@ -37,8 +37,8 @@ copyfile([folder(1:46) '03_C++\MEX Functions\gpudasindex.cu'])
 figure; tiledlayout(1, numimgs);
             %% Dataset and Imaging Area
 nvidiaDev   = gpuDevice;
-leafdata    = Dataset("leaf",0); leafdata = leafdata.rfcaster('double');
-sensarr     = SensorArray("leaf");
+leafdata    = Dataset("crossinghair",0); leafdata = leafdata.rfcaster('double');
+sensarr     = SensorArray("crossinghair");
 interpolt   = false;
 
 mins        = -0.02; intval = 0.0001; maxs = -mins-intval;
@@ -63,9 +63,6 @@ gmul_mat    = mult_mat.Send2GPU;
 
             nexttile; imagesc(abs(DASIMG)); colormap(pucolors.purplebone); 
             
-
-kdasimg     = fftshift(fftn(DASIMG));
-            imagesc(20*log10(abs(kdasimg)));
             end
             %% Run indexing via C function:
             if ind_c
@@ -75,7 +72,7 @@ mat         = ind_mat.M - 1;
 CDASIMG     = dasindex(mat, leafdata.rfdata);
             timec = toc; disp("DAS Index in C: " + timec)
 
-% nexttile; imagesc(abs(CDASIMG)); colormap(pucolors.cvidis);
+nexttile; imagesc(abs(CDASIMG)); colormap(pucolors.cvidis);
             end
             %% Run indexing function on GPU
             if ind_gpu_matlab
@@ -223,3 +220,25 @@ nexttile
     imagesc(abs(C_Mmult_CPU.')); colormap('pucolors.inferno'); title("C++ Sparse Matrix Multiplication"); colorbar;
     daspect([1 1 1]);
             end
+
+            %% Backtrack from kspace
+KDASIMG     = fftshift(fftn(fftshift(DASIMG)));
+
+[xmesh, ymesh] = meshgrid(area1.x_arr, area1.y_arr);
+[thmesh, rmesh] = cart2pol(xmesh, ymesh);
+
+figure; tiledlayout(1,3); nexttile;
+a = pcolor(thmesh, rmesh, 20*log10(abs(KDASIMG)));
+a.EdgeColor = 'interp';
+
+leafpad     = [flip(leafdata.rfdata);leafdata.rfdata];
+leafk       = fftn(leafpad);
+
+nexttile;
+c = imagesc(20*log10(abs(KDASIMG)));
+
+nexttile;
+b = pcolor(20*log10(abs(leafk)));
+b.EdgeColor = 'interp';
+
+colormap(pucolors.cvidis)
