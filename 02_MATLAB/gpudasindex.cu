@@ -15,12 +15,22 @@ typedef struct sizes {
             size_t imax;
             size_t jmax;
             size_t kmax;
-            const size_t xysize;
+            size_t xysize;
             size_t M_numel;
 } sizes;
 
+//a device function to reduce the last several warps of the reduction faster.
+__device__ void warpreduce(volatile double* s_matrix, int thread_vector) {
+    s_matrix[thread_vector] += s_matrix[thread_vector + 32];
+    s_matrix[thread_vector] += s_matrix[thread_vector + 16];
+    s_matrix[thread_vector] += s_matrix[thread_vector + 8];
+    s_matrix[thread_vector] += s_matrix[thread_vector + 4];    
+    s_matrix[thread_vector] += s_matrix[thread_vector + 2];
+    s_matrix[thread_vector] += s_matrix[thread_vector + 1];
+}
+
 //kernel Creates a beamformed image array on the GPU.
-__global__ void DAS_Index_GPU(const unsigned int* indmat, const double* rfptr, double* reconptr, sizes sz) {    
+__global__ void DAS_Index_GPU(const unsigned int* indmat, const double* rfdata, double* img3d, double* img, sizes sz) {    
     // define device variables
     int x = threadIdx.x + blockDim.x * blockIdx.x;
     int y = threadIdx.y + blockDim.y * blockIdx.y;
@@ -30,7 +40,7 @@ __global__ void DAS_Index_GPU(const unsigned int* indmat, const double* rfptr, d
     if(z < sz.kmax && y < sz.jmax && x < sz.imax) {
         int M_index             = x + y * sz.imax + z * sz.xysize;
         int Img_Index           = z + x * sz.kmax + y * sz.kmax*sz.imax;
-        *(reconptr + Img_Index) = *(rfptr + *(indmat + M_index));
+        *(img3d + Img_Index) = *(rfdata + *(indmat + M_index));
     }
 }
 
@@ -39,26 +49,20 @@ __global__ void DAS_3DSUM(double* matrix_3d, double* matrix_2d, sizes sz) {
     extern __shared__ double shared_matrix_data[];
 
     int thread_vector   = threadIdx.x; //1:512
-    int all_threads     = blockIdx.x * blockDim.x + threadIdx.x; //1:512 + 1:160k*512
+    int all_threads     = blockIdx.x * blockDim.x*2 + threadIdx.x; //1:512 + 1:160k*512
 
-    shared_matrix_data[thread_vector] = matrix_3d[all_threads];
+    //first add during global load, we've done the first add from 512 - 256 elements
+    shared_matrix_data[thread_vector] = matrix_3d[all_threads] + matrix_3d[all_threads + blockDim.x];
     __syncthreads();
     
-    // thread_vector: 1:1024
-    // blockIdx.x goes from 1:80,000
-    // blockDim = 1024 *2 = 2048
+    //interleaved addition:
+    if(thread_vector < 128) {
+        shared_matrix_data[thread_vector] += shared_matrix_data[thread_vector + 128];} __syncthreads();
+    if(thread_vector < 64) {
+        shared_matrix_data[thread_vector] += shared_matrix_data[thread_vector + 64];} __syncthreads();
 
-    for(unsigned int ii = blockDim.x/2; ii > 0; ii >>= 1) {
-        //ii = 512/2 = 256, ii > 0; ii /=2
-        // 256 -> 128 -> 64 -> 32 -> 16 -> 8 -> 4 -> 2 -> 1
-        
-        if(thread_vector < ii) {
-            //if thread vector < 256
-            shared_matrix_data[thread_vector] += shared_matrix_data[thread_vector + ii];
-            //shared_matrix_data[1:256] += shared_matrix_data[257:512];
-        }
-        __syncthreads();
-    }
+    if(thread_vector < 32) warpreduce(shared_matrix_data, thread_vector);
+
     if(thread_vector == 0) matrix_2d[blockIdx.x] = shared_matrix_data[0];
 }
 
@@ -140,11 +144,11 @@ void mexFunction(int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[]) {
 
     timertime start8 = timer::now();
     // Call the kernel
-    DAS_Index_GPU<<<block, threads>>>(M_dvc, rfdata_dvc, img3_dvc, sz1);
+    DAS_Index_GPU<<<block, threads>>>(M_dvc, rfdata_dvc, img3_dvc, img2_dvc, sz1);
     cudaDeviceSynchronize();
 
     //Call the other kernel
-    DAS_3DSUM <<<sz1.xysize, 512, 512*sizeof(double)>>>(img3_dvc, img2_dvc, sz1);
+    DAS_3DSUM <<<sz1.xysize, 256, 256*sizeof(double)>>>(img3_dvc, img2_dvc, sz1);
     cudaDeviceSynchronize();
 
     timertime stop8 = timer::now();
