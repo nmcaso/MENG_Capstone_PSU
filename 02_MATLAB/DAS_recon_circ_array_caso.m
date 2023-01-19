@@ -6,7 +6,7 @@
 
             % Select the things to run:
 ind_matlab      = false;
-ind_c           = false;
+ind_c           = true;
 ind_gpu_matlab  = false;
 ind_gpu_cuda    = true;
 mmt_matlab      = false;
@@ -83,10 +83,13 @@ nexttile; imagesc(abs(G_DASIMG)); colormap(pucolors.cvidis);
             end
 
             %% Run indexing function on CUDA GPU
+smat        = gind_mat.M-1;
+nvidiaDev.wait();
+
             if ind_gpu_cuda
 
             tic 
-CUDA_DASIMG = gpudasindex(gind_mat.M-1, gleafdata.rfdata, 2^3, 2^3, 2^4);
+CUDA_DASIMG = gpudasindex(smat, gleafdata.rfdata, 2^3, 2^3, 2^4);
             timecuda = toc; disp("GPU (CUDA) performance: " + timecuda);
 
 nexttile; imagesc(abs(CUDA_DASIMG)); colormap(pucolors.cvidis);
@@ -221,24 +224,28 @@ nexttile
     daspect([1 1 1]);
             end
 
-            %% Backtrack from kspace
-KDASIMG     = fftshift(fftn(fftshift(DASIMG)));
+%             %% Backtrack from kspace
+% KDASIMG     = fftshift(fftn(fftshift(DASIMG)));
+% 
+% [xmesh, ymesh] = meshgrid(area1.x_arr, area1.y_arr);
+% [thmesh, rmesh] = cart2pol(xmesh, ymesh);
+% 
+% figure; tiledlayout(1,3); nexttile;
+% a = pcolor(thmesh, rmesh, 20*log10(abs(KDASIMG)));
+% a.EdgeColor = 'interp';
+% 
+% leafpad     = [flip(leafdata.rfdata);leafdata.rfdata];
+% leafk       = fftn(leafpad);
+% 
+% nexttile;
+% c = imagesc(20*log10(abs(KDASIMG)));
+% 
+% nexttile;
+% b = pcolor(20*log10(abs(leafk)));
+% b.EdgeColor = 'interp';
+% 
+% colormap(pucolors.cvidis)
 
-[xmesh, ymesh] = meshgrid(area1.x_arr, area1.y_arr);
-[thmesh, rmesh] = cart2pol(xmesh, ymesh);
+            %% muck around with indices
 
-figure; tiledlayout(1,3); nexttile;
-a = pcolor(thmesh, rmesh, 20*log10(abs(KDASIMG)));
-a.EdgeColor = 'interp';
-
-leafpad     = [flip(leafdata.rfdata);leafdata.rfdata];
-leafk       = fftn(leafpad);
-
-nexttile;
-c = imagesc(20*log10(abs(KDASIMG)));
-
-nexttile;
-b = pcolor(20*log10(abs(leafk)));
-b.EdgeColor = 'interp';
-
-colormap(pucolors.cvidis)
+% imagesc(CUDA_DASIMG); colormap(pucolors.cvidis)

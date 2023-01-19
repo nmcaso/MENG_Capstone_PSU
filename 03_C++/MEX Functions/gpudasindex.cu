@@ -2,10 +2,10 @@
 #include "C:/Program Files/MATLAB/R2022b/toolbox/parallel/gpu/extern/include/gpu/mxGPUArray.h"
 #include <chrono>
 
-#define timer std::chrono::high_resolution_clock
-#define timertime std::chrono::high_resolution_clock::time_point
-#define timecast std::chrono::duration_cast<std::chrono::microseconds>
-#define timesecs std::chrono::microseconds
+#define timer       std::chrono::high_resolution_clock
+#define timertime   std::chrono::high_resolution_clock::time_point
+#define timecast    std::chrono::duration_cast<std::chrono::microseconds>
+#define timesecs    std::chrono::microseconds
 
 //a convenient structure
 typedef struct sizes {
@@ -15,12 +15,12 @@ typedef struct sizes {
             size_t imax;
             size_t jmax;
             size_t kmax;
-            size_t xysize;
+            const size_t xysize;
             size_t M_numel;
 } sizes;
 
 //kernel Creates a beamformed image array on the GPU.
-__global__ void DAS_Index_GPU(const unsigned int* indmat, const double* rfptr, double* reconptr, struct sizes sz) {    
+__global__ void DAS_Index_GPU(const unsigned int* indmat, const double* rfptr, double* reconptr, sizes sz) {    
     // define device variables
     int x = threadIdx.x + blockDim.x * blockIdx.x;
     int y = threadIdx.y + blockDim.y * blockIdx.y;
@@ -28,30 +28,46 @@ __global__ void DAS_Index_GPU(const unsigned int* indmat, const double* rfptr, d
 
     //memory index
     if(z < sz.kmax && y < sz.jmax && x < sz.imax) {
-        int moderate_index = x + y * sz.imax;
-        int final_index = *(indmat + moderate_index + z * sz.xysize);
-        *(reconptr + moderate_index) += *(rfptr + final_index);
+        int M_index             = x + y * sz.imax + z * sz.xysize;
+        int Img_Index           = z + x * sz.kmax + y * sz.kmax*sz.imax;
+        *(reconptr + Img_Index) = *(rfptr + *(indmat + M_index));
     }
+}
+
+__global__ void DAS_3DSUM(double* matrix_3d, double* matrix_2d, sizes sz) {
+
+    extern __shared__ double shared_matrix_data[];
+
+    int thread_vector   = threadIdx.x; //1:512
+    int all_threads     = blockIdx.x * blockDim.x + threadIdx.x; //1:512 + 1:160k*512
+
+    shared_matrix_data[thread_vector] = matrix_3d[all_threads]; // + matrix_3d[all_threads + blockDim.x];
+    __syncthreads();
+    
+    // thread_vector: 1:1024
+    // blockIdx.x goes from 1:80,000
+    // blockDim = 1024 *2 = 2048
+
+    for(unsigned int ii = blockDim.x/2; ii > 0; ii >>= 1) {
+        //ii = 512/2 = 256, ii > 0; ii /=2
+        // 256 -> 128 -> 64 -> 32 -> 16 -> 8 -> 4 -> 2 -> 1
+        
+        if(thread_vector < ii) {
+            //if thread vector < 256
+            shared_matrix_data[thread_vector] += shared_matrix_data[thread_vector + ii];
+            //shared_matrix_data[1:256] += shared_matrix_data[257:512];
+        }
+        __syncthreads();
+    }
+    if(thread_vector == 0) matrix_2d[blockIdx.x] = shared_matrix_data[0];
 }
 
 //wrapper into MATLAB
 void mexFunction(int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[]) {
 
     mxInitGPU();
-    
     const char*         const errId = "parallel:gpu:gpudasindex:InvalidInput"; //error message
-    //input variables
-    const mxGPUArray*   M;
-    const mxGPUArray*   rfdata;
-    //derived variables
-    const mwSize*       dims_3;
     
-    //output variables
-    mxGPUArray*         img_2d;
-    mxGPUArray*         img_3d;
-    double*             img3_dvc;
-    double*             img2_dvc;
-
     //Input Error handling
     if (nrhs!=5) {
         mexErrMsgIdAndTxt(errId, "Expected 5 inputs: M, rfdata, thread/block x, thread/block y, thread/block z");
@@ -70,11 +86,10 @@ void mexFunction(int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[]) {
     }
 
     // Load mx gpu array objects
-    M       = mxGPUCreateFromMxArray(prhs[0]); 
-    rfdata  = mxGPUCreateFromMxArray(prhs[1]);
-    dims_3  = mxGPUGetDimensions(M);
-
-    const mwSize xysz[2] = {dims_3[0], dims_3[1]};
+    const mxGPUArray*   M           = mxGPUCreateFromMxArray(prhs[0]);
+    const mxGPUArray*   rfdata      = mxGPUCreateFromMxArray(prhs[1]);
+    const mwSize*       dims_3      = mxGPUGetDimensions(M);
+    const mwSize        xysz[2]     = {dims_3[0], dims_3[1]};
 
     sizes sz1 = {
     //define block and thread sizes
@@ -91,18 +106,16 @@ void mexFunction(int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[]) {
     };
 
     //round up to the nearest integer of the dimension length divided by the thread   dimension
-    int blockx          = sz1.imax/sz1.i + (sz1.imax % sz1.i != 0);
-    int blocky          = sz1.jmax/sz1.j + (sz1.jmax % sz1.j != 0);
-    int blockz          = sz1.kmax/sz1.k + (sz1.kmax % sz1.k != 0);
+    int blockx = sz1.imax/sz1.i + (sz1.imax % sz1.i != 0);
+    int blocky = sz1.jmax/sz1.j + (sz1.jmax % sz1.j != 0);
+    int blockz = sz1.kmax/sz1.k + (sz1.kmax % sz1.k != 0);
 
     //grid and block 3D arrays
-    dim3                grid(sz1.i, sz1.j, sz1.k);
-    dim3                block(blockx, blocky, blockz);
-    size_t total_threads = sz1.i * sz1.j * sz1.k;
+    dim3    threads(sz1.i, sz1.j, sz1.k);
+    dim3    block(blockx, blocky, blockz);
+    size_t  total_threads = sz1.i * sz1.j * sz1.k;
 
-    const mwSize* mnum   = &sz1.M_numel;
-    // const mwSize* nnum   = &sz1.xysize;
-
+    const mwSize* mnum = &sz1.M_numel;
     //Verify that inputs are correct classes before extracting the pointer.
     if (mxGPUGetClassID(M) != mxUINT32_CLASS) {
         mexErrMsgIdAndTxt(errId, "Index Matrix M must have class 'uint32'");
@@ -115,16 +128,23 @@ void mexFunction(int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[]) {
     }
 
     // Extract a pointer to the input data on the device.
-    const unsigned int* M_dvc = (const unsigned int*) (mxGPUGetDataReadOnly(M));
-    const double* rfdata_dvc  = (const double*)       (mxGPUGetDataReadOnly(rfdata));
+    const unsigned int*     M_dvc       = (const unsigned int*) (mxGPUGetDataReadOnly(M));
+    const double*           rfdata_dvc  = (const double*)       (mxGPUGetDataReadOnly(rfdata));
 
     // Create a GPUArray to hold the result and get its underlying pointer.
-    img_2d = mxGPUCreateGPUArray(2, xysz, mxDOUBLE_CLASS, mxREAL, MX_GPU_INITIALIZE_VALUES);
-    img2_dvc = (double*)(mxGPUGetData(img_2d));
+    mxGPUArray* img_3d      = mxGPUCreateGPUArray(1, mnum, mxDOUBLE_CLASS, mxREAL, MX_GPU_DO_NOT_INITIALIZE);
+    double*     img3_dvc    = (double*)(mxGPUGetData(img_3d));
+
+    mxGPUArray* img_2d      = mxGPUCreateGPUArray(2, xysz, mxDOUBLE_CLASS, mxREAL, MX_GPU_INITIALIZE_VALUES);
+    double*     img2_dvc    = (double*)(mxGPUGetData(img_2d));
 
     timertime start8 = timer::now();
     // Call the kernel
-    DAS_Index_GPU<<<block, grid>>>(M_dvc, rfdata_dvc, img2_dvc, sz1);
+    DAS_Index_GPU<<<block, threads>>>(M_dvc, rfdata_dvc, img3_dvc, sz1);
+    cudaDeviceSynchronize();
+
+    //Call the other kernel
+    DAS_3DSUM <<<sz1.xysize, 512, 512*sizeof(double)>>>(img3_dvc, img2_dvc, sz1);
     cudaDeviceSynchronize();
 
     timertime stop8 = timer::now();
