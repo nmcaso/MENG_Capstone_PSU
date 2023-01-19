@@ -5,22 +5,26 @@
             end
 
             % Select the things to run:
-ind_matlab      = true;
+original        = true;
+ind_mat_vec     = true;
+ind_mat_element = true;
+ind_mat_halfvec = true;
 ind_c           = true;
-ind_gpu_matlab  = true;
+ind_gpu_mat     = true;
 ind_gpu_cuda    = true;
 mmt_matlab      = true;
 mmt_gpu_matlab  = true;
-compute_averages= false;
+
+compute_averages= true;
 nicerplots      = false;
 
 compile_c_mex   = false;
 compile_cuda_mex= false;
 
-numimgs         = ind_matlab + ind_c + ind_gpu_matlab + ind_gpu_cuda ...
-                    + mmt_matlab + mmt_gpu_matlab;
+numimgs         = ind_mat_vec + ind_mat_halfvec + ind_mat_element + ind_c + ind_gpu_mat + ind_gpu_cuda ...
+                    + mmt_matlab + mmt_gpu_matlab + original;
 
-%% Compile MEX function(s) if desired
+            %% Compile MEX function(s) if desired
 
             if compile_c_mex
 folder      = pwd;
@@ -30,139 +34,223 @@ copyfile([folder(1:46) '03_C++\MEX Functions\DAS_Index.c'])
             if compile_cuda_mex
 folder      = pwd;
 copyfile([folder(1:46) '03_C++\MEX Functions\gpudasindex.cu'])
-            mexcuda "gpudasindex.cu" COPTIMFLAGS="-O3 -fwrapv"
+            mexcuda "gpudasindex.cu" COPTIMFLAGS="-O3 -fwrapv" -output CUDA_DAS_index
             end
 
-figure; tiledlayout(1, numimgs);
-            %% Dataset and Imaging Area
+figure;
+
+            %% Create Dataset, imaging area, and delay matrix
 nvidiaDev   = gpuDevice;
-leafdata    = Dataset("crossinghair",0); leafdata = leafdata.rfcaster('double');
-sensarr     = SensorArray("crossinghair");
+data        = Dataset("leaf",0); 
+data        = data.rfcaster('double');
+sensarr     = SensorArray("leaf");
 interpolt   = false;
 
 mins        = -0.02; intval = 0.0001; maxs = -mins-intval;
-area1       = ImageArea(maxs, mins, intval, maxs, mins, intval);
-ind_mat     = IndexMatrix(sensarr,area1,leafdata, "index", interpolt); disp("Time to make Index Matrix: " + ind_mat.Times.total)
+squarea     = ImageArea(maxs, mins, intval, maxs, mins, intval);
+ind_mat     = IndexMatrix(sensarr,squarea,data, "index", interpolt); 
+            disp("Time to make Index Matrix: " + ind_mat.Times.total)
 
-            if ind_gpu_cuda || ind_gpu_matlab || mmt_gpu_matlab || compute_averages
+            if ind_gpu_cuda || ind_gpu_mat || mmt_gpu_matlab || compute_averages
 gind_mat    = ind_mat.Send2GPU;
-gleafdata   = leafdata.gpuDataSet;
+gleafdata   = data.gpuDataSet;
             end
             if mmt_matlab || compute_averages
-mult_mat    = IndexMatrix(sensarr,area1,leafdata,"matrix", interpolt); disp("Time to make MMT Matrix: " + mult_mat.Times.total);
+mult_mat    = IndexMatrix(sensarr,squarea,data,"matrix", interpolt); disp("Time to make MMT Matrix: " + mult_mat.Times.total);
             end
             if mmt_gpu_matlab || compute_averages
 gmul_mat    = mult_mat.Send2GPU;
             end
 
-            %% Run indexing function normally on CPU
-            if ind_matlab
-[DASIMG, timemmtcpu]= DAS_index(leafdata,ind_mat);
-            disp("DAS Indexing (Matlab) time: " + timemmtcpu)
+            %% Run the original DAS function without any optimization
+            if original
+            tic
+MAT_ORIGIN  = DAS_original(data, squarea, sensarr);
+            time_orig = toc;
+            disp("Original function time: " + time_orig)
 
-            nexttile; imagesc(abs(DASIMG)); colormap(pucolors.purplebone); 
-            
+            nexttile; imagesc(abs(MAT_ORIGIN)); colormap(pucolors.purplebone); 
             end
-            %% Run indexing via C function:
+
+            %% Run indexing function normally on CPU
+            if ind_mat_vec
+            tic;
+MAT_VEC_IMG = DAS_index(data,ind_mat);
+            time_matlab_vec = toc;
+            disp("DAS Indexing (Matlab Fully Vectorized) time: " + time_matlab_vec)
+
+            nexttile; imagesc(abs(MAT_VEC_IMG)); colormap(pucolors.purplebone); 
+            end
+            
+            %% Run half-vectorized function on CPU
+            if ind_mat_halfvec
+antiphase(1,1,:) = uint32(2125*(0:511));
+non_phased_M = ind_mat.M - antiphase;
+            tic;
+MAT_HALF_IMG= DAS_half_vec_loop(data, non_phased_M);
+            time_matlab_halfvec = toc;
+            disp("DAS Indexing (Matlab Partially Vectorized) time: " + time_matlab_halfvec);
+            
+            nexttile; imagesc(abs(MAT_HALF_IMG)); colormap(pucolors.purplebone); 
+            end
+
+            %% Run completely elemental matlab function on CPU
+            if ind_mat_element
+antiphase(1,1,:) = uint32(2125*(0:511));
+non_phased_M = ind_mat.M - antiphase;
+            tic;
+MAT_ELE_IMG = DAS_elementalLoop(data, non_phased_M);
+            time_matlab_elem = toc;
+            disp("DAS Indexing (Matlab Elemental) time: " + time_matlab_elem);
+            
+            nexttile; imagesc(abs(MAT_ELE_IMG)); colormap(pucolors.purplebone); 
+            end
+
+            %% Run indexing via C MEX function:
             if ind_c
-mat         = ind_mat.M - 1;
+mat         = ind_mat.M - 1; %because C is zero-indexed
             
             tic
-CDASIMG     = dasindex(mat, leafdata.rfdata);
-            timec = toc; disp("DAS Index in C: " + timec)
+C_IMAGE     = dasindex(mat, data.rfdata);
+            time_c = toc; disp("DAS Index in C: " + time_c)
 
-nexttile; imagesc(abs(CDASIMG)); colormap(pucolors.cvidis);
+nexttile; imagesc(abs(C_IMAGE)); colormap(pucolors.cvidis);
             end
-            %% Run indexing function on GPU
-            if ind_gpu_matlab
-[G_DASIMG, timegpu]    = DAS_GP(gleafdata,gind_mat);
-            disp("GPU (Matlab) performance: " + timegpu)
 
-nexttile; imagesc(abs(G_DASIMG)); colormap(pucolors.cvidis);
+            %% Run indexing function on GPU
+            if ind_gpu_mat
+MAT_GPU_IMG = DAS_GPU_index(gleafdata, gind_mat);
+            nvidiaDev.wait();
+            time_gpu = toc;
+            disp("GPU (Matlab) performance: " + time_gpu)
+
+            nexttile; imagesc(abs(MAT_GPU_IMG)); colormap(pucolors.cvidis);
             end
 
             %% Run indexing function on CUDA GPU
-smat        = gind_mat.M-1;
-nvidiaDev.wait();
-
             if ind_gpu_cuda
+smat        = gind_mat.M-1; % again, because C is zero-indexed
+            nvidiaDev.wait(); %wait for the subtraction to end on all threads
 
             tic
-CUDA_DASIMG = gpudasindex(smat, gleafdata.rfdata, 2^1, 2^1, 2^8);
-            nvidiaDev.wait();
-            timecuda = toc; disp("GPU (CUDA) performance: " + timecuda);
+CUDA_IMG    = CUDA_DAS_index(smat, gleafdata.rfdata, 4, 4, 64);
+            time_cuda = toc; disp("GPU (CUDA) performance: " + time_cuda);
+            % no nvidiaDev.wait() function necessary here; CUDA_DAS_index
+            % includes the cuda device synchronization calrfdata      = mxGPUCreateFromMxArray(prhs[1]);ls.
 
-nexttile; imagesc(abs(CUDA_DASIMG)); colormap(pucolors.cvidis);
+            nexttile; imagesc(abs(CUDA_IMG));
+            colormap(pucolors.cvidis);
             end
 
             %% Run mmult DAS function normally on CPU
             if mmt_matlab
-[M_DASIMG, timemmtcpu]     = DAS_mmult(leafdata,mult_mat,area1); 
-            disp("Matrix Mult DAS Time: " + timemmtcpu);   
+            tic;
+MAT_MUL_IMG = DAS_mmult(data, mult_mat, squarea);
+            time_mmult_cpu = toc;
+            disp("Matrix Mult DAS Time: " + time_mmult_cpu);   
 
-nexttile; imagesc(abs(M_DASIMG)); colormap(pucolors.cvidis);
+            nexttile; imagesc(abs(MAT_MUL_IMG)); colormap(pucolors.cvidis);
             end
 
             %% Run mmult DAS function on GPU
             if mmt_gpu_matlab
             tic
-[GM_DASIMG]    = DAS_mmult(gleafdata,gmul_mat,area1);
+MAT_MUL_GPU = DAS_mmult(gleafdata,gmul_mat,squarea);
             nvidiaDev.wait();
-            timemmtcpu = toc;
-            disp("GPU MMULT Time: " + timemmtcpu)
+            time_mmult_gpu = toc;
+            disp("GPU MMULT Time: " + time_mmult_gpu)
 
-nexttile; imagesc(abs(GM_DASIMG)); colormap(pucolors.cvidis);
+            nexttile; imagesc(abs(MAT_MUL_GPU)); colormap(pucolors.cvidis);
             end
 
             %% Averages
             if compute_averages
-numavgs     = 50; cpumnd = zeros(numavgs,1); 
-gpuind = cpumnd; cpumult = cpumnd; gpumult = cpumnd; cpucnd = cpumnd;
+numavgs     = 100;
+cpumnd = zeros(numavgs,1); halfvec = cpumnd; cudaind = cpumnd;
+gpuind = cpumnd; cpumult = cpumnd; gpumult = cpumnd; cpucnd = cpumnd; elemt = cpumnd;
+            
             for aa = 1:numavgs %Normal indexing function on CPU
-[DASIMG, timemmtcpu]       = DAS_index(leafdata,ind_mat);
-cpumnd(aa)  = timemmtcpu;
-            end; fprintf("Indexing CPU Completed\n")
+            tic;
+IMG1        = DAS_index(data, ind_mat);
+cpumnd(aa)  = toc;
+            end; disp("Indexing CPU Completed")
+
+antiphase(1,1,:) = uint32(2125*(0:511));
+non_phased_M = ind_mat.M - antiphase;
+%             for aa = 1:numavgs %Elemental Loop Indexing
+%             tic;
+% IMG2        = DAS_elementalLoop(data, non_phased_M);
+% elemt(aa)   = toc;
+%             end; disp("Elemental Indexing Complete")
+
+            for aa = 1:numavgs %Partially vectorized loop indexing
+            tic;
+IMG3        = DAS_half_vec_loop(data, non_phased_M);
+halfvec(aa) = toc;
+            end; disp("Half-Vectorized indexing Complete")
+
 mat         = ind_mat.M - 1;
             for aa = 1:numavgs %Normal indexing function with MEX
             tic
-CUDADASIMG  = dasindex(mat, leafdata.rfdata);
+IMG4        = dasindex(mat, data.rfdata);
             ccputime = toc;
 cpucnd(aa)  = ccputime;
-            end; fprintf("C MEX Indexing CPU Completed\n")
+            end; disp("C MEX Indexing CPU Completed")
+
             for aa = 1:numavgs %Normal indexing function on GPU
-[G_DASIMG, timegpu]    = DAS_GP(gleafdata,gind_mat);
-gpuind(aa)  = timegpu;
-            end; fprintf("Indexing GPU Completed\n")
+            tic
+IMG5        = DAS_GPU_index(gleafdata, gind_mat);
+            nvidiaDev.wait();
+gpuind(aa)  = toc;
+            end; disp("Indexing GPU Completed")
+
+smat        = gind_mat.M - 1; nvidiaDev.wait();
+            for aa = 1:numavgs
+            tic
+IMG6        = CUDA_DAS_index(smat, gleafdata.rfdata, 4, 4, 64);
+cudaind(aa) = toc;
+            end; disp("CUDA Indexing Complete");
+
             for aa = 1:numavgs %Sparse Matrix Multiplication on CPU
-[MDASIMG, mperformance]     = DAS_mmult(leafdata,mult_mat,area1);
-cpumult(aa) = mperformance;
-            end; fprintf("MMULT CPU Completed\n")
+            tic;
+IMG7        = DAS_mmult(data, mult_mat, squarea);
+cpumult(aa) = toc;
+            end; disp("MMULT CPU Completed")
+
             for aa = 1:numavgs %Sparse Matrix Multiplication on GPU
-[GMDASIMG, gmperformance]   = DAS_mmult(gleafdata,gmul_mat,area1);
-gpumult(aa) = gmperformance;
-            end; fprintf("MMULT GPU Completed\n")
+            tic;
+IMG8        = DAS_mmult(gleafdata,gmul_mat,squarea);
+            nvidiaDev.wait();
+gpumult(aa) = toc;
+            end; disp("MMULT GPU Completed\n")
 
-avg_icpu    = sum(cpumnd)/numavgs;
-avg_icpuc   = sum(cpucnd)/numavgs;
-avg_igpu    = sum(gpuind)/numavgs;
-avg_mcpu    = sum(cpumult)/numavgs;  
-avg_mgpu    = sum(gpumult)/numavgs;
+%%
+trunc       = 1;
+avg_iele    = sum(elemt(trunc:end))/(numavgs-trunc+1);
+avg_icpu    = sum(cpumnd(trunc:end))/(numavgs-trunc+1);
+avg_half    = sum(halfvec(trunc:end))/(numavgs-trunc+1);
+avg_icpuc   = sum(cpucnd(trunc:end))/(numavgs-trunc+1);
+avg_igpu    = sum(gpuind(trunc:end))/(numavgs-trunc+1);
+avg_cuda    = sum(cudaind(trunc:end))/(numavgs-trunc+1);
+avg_mcpu    = sum(cpumult(trunc:end))/(numavgs-trunc+1);
+avg_mgpu    = sum(gpumult(trunc:end))/(numavgs-trunc+1);
 
-fprintf("Average processing time indexing on CPU: %.4f seconds.\n", avg_icpu);
-fprintf("Average processing time indexing with MEX: %.4f seconds.\n", avg_icpuc);
-fprintf("Average processing time indexing on GPU: %.4f seconds.\n", avg_igpu);
-fprintf("Average processing time matrix mult CPU: %.4f seconds.\n", avg_mcpu);
-fprintf("Average processing time matrix mult GPU: %.4f seconds.\n", avg_mgpu);
-fprintf("GPU is %.2f times faster than CPU.\n", avg_icpu/avg_igpu);
-fprintf("Mmult GPU is %.2f times faster than indexing GPU, and %.2f times faster than indexing with CPU.\n", avg_igpu/avg_mgpu, avg_icpu/avg_mgpu);
+fprintf("Average processing time indexing elemental     %.4f seconds.\n", avg_iele);
+fprintf("Average processing time indexing half-vec:     %.4f seconds.\n", avg_half);
+fprintf("Average processing time vectorized on CPU:     %.4f seconds.\n", avg_icpu);
+fprintf("Average processing time indexing with C MEX:   %.4f seconds.\n", avg_icpuc);
+fprintf("Average processing time indexing on GPU:       %.4f seconds.\n", avg_igpu);
+fprintf("Average processing time matrix mult CPU:       %.4f seconds.\n", avg_mcpu);
+fprintf("Average processing time matrix mult GPU:       %.4f seconds.\n", avg_mgpu);
+fprintf("Average processing time CUDA Indexing:         %.4f seconds.\n", avg_cuda);
             end
             %% Figures
             if nicerplots && mmult_matlab 
 mx1 = max(max(DASIMG));
-mx2 = max(max(M_DASIMG));
+mx2 = max(max(MAT_MUL_IMG));
 
 noninterp = abs(DASIMG/mx1); %normalize
-interpmm  = abs(M_DASIMG/mx2);
+interpmm  = abs(MAT_MUL_IMG/mx2);
 
 a = 3;
 nonintlog = mx1*(log10(1+a*noninterp)./log10(1+a));

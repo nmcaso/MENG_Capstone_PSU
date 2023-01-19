@@ -25,7 +25,7 @@ methods
         obj.fs  = fs;
         obj.dt  = 1/(fs*1e6);
         obj.c   = sos*1000;
-        obj.rfdata = rfdata;
+        obj.rfdata = rfdata./size(rfdata,2);
         obj.pulse_ind = pulse_ind;
 
     end

@@ -1,8 +1,12 @@
-function [img_arr, time] = DAS_index(dataset,indexmatrix)
+function img_arr = DAS_index(dataset,indexmatrix)
+%img_arr = DAS_index(dataset, indexmatrix)
+%
+% Performs delay and sum by means of indexing timeseries data into a 3D
+% delay matrix and then adding the results along the sensor dimension.
+%
+% Use the classes Dataset and IndexMatrix to generate the inputs.
 
-tic
-%Sum and shape the final array
-img_arr         = mean(dataset.rfdata(indexmatrix.M),3);
-time            = toc;
+            % this is the most vectorized version of the function on the CPU in MATLAB
+img_arr     = sum(dataset.rfdata(indexmatrix.M),3);
 
 end
