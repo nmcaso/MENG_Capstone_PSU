@@ -9,9 +9,6 @@
 
 //a convenient structure
 typedef struct sizes {
-            size_t i;
-            size_t j;
-            size_t k;
             size_t imax;
             size_t jmax;
             size_t kmax;
@@ -30,28 +27,27 @@ __device__ void warpreduce(volatile double* s_matrix, int thread_vector) {
 }
 
 //kernel Creates a beamformed image array on the GPU.
-__global__ void DAS_Index_GPU(const unsigned int* indmat, const double* rfdata, double* img3d, double* img, sizes sz) {    
-    // define device variables
-    int x = threadIdx.x + blockDim.x * blockIdx.x;
-    int y = threadIdx.y + blockDim.y * blockIdx.y;
-    int z = threadIdx.z + blockDim.z * blockIdx.z;
+__global__ void DAS_Index_GPU(const unsigned int* indmat, const double* rfdata, double* img3d) {    
 
-    //memory index
-    if(z < sz.kmax && y < sz.jmax && x < sz.imax) {
-        int M_index             = x + y * sz.imax + z * sz.xysize;
-        int Img_Index           = z + x * sz.kmax + y * sz.kmax*sz.imax;
-        *(img3d + Img_Index)    = *(rfdata + *(indmat + M_index));
-    }
+    //nice easy 1D kernel
+    int z = threadIdx.x;
+    int xy = blockIdx.x;
+    int xyz = xy * blockDim.x + z; 
+
+    img3d[xyz] = rfdata[indmat[xyz]];
 }
 
-__global__ void DAS_3DSUM(double* matrix_3d, double* matrix_2d, sizes sz) {
+//going to have to transpose this to be faster. I'll do that tomorrow. take a look at https://github.com/shwina/cuper/blob/master/cuTranspose/transpose3d.cu, dev_transpose_102_in_place
+
+//kernel to take the sum in the coalesced first dimension of the 3D array
+__global__ void DAS_3DSUM(double* matrix_3d, double* matrix_2d) {
 
     extern __shared__ double shared_matrix_data[];
 
-    int thread_vector   = threadIdx.x; //1:512
-    int all_threads     = blockIdx.x * blockDim.x*2 + threadIdx.x; //1:512 + 1:160k*512
+    int thread_vector   = threadIdx.x; //1:256
+    int all_threads     = blockIdx.x * blockDim.x*2 + threadIdx.x; //1:256 + 1:160k*256*2
 
-    //first add during global load, we've done the first add from 512 - 256 elements
+    //first add during global load
     shared_matrix_data[thread_vector] = matrix_3d[all_threads] + matrix_3d[all_threads + blockDim.x];
     __syncthreads();
     
@@ -75,8 +71,8 @@ void mexFunction(int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[]) {
     const char*         const errId = "parallel:gpu:gpudasindex:InvalidInput"; //error message
 
     //Input Error handling
-    if (nrhs!=5) {
-        mexErrMsgIdAndTxt(errId, "Expected 5 inputs: Index Matrix M (3D), rfdata matrix (2D), thread/block x (double type integer), thread/block y (double type integer), thread/block z (double type integer)");
+    if (nrhs!=2) {
+        mexErrMsgIdAndTxt(errId, "Expected 2 inputs: Index Matrix M (3D), rfdata matrix (2D)");
     } 
     if (nlhs!=1 && nlhs!=0) {
         mexErrMsgIdAndTxt(errId, "Invalid number of output arguments, only 1 allowed.");
@@ -86,9 +82,6 @@ void mexFunction(int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[]) {
     }
     if (!mxIsGPUArray(prhs[1])) {
         mexErrMsgIdAndTxt(errId,"rfdata must be a gpuArray.");
-    }
-    if (!mxIsDouble(prhs[2]) || !mxIsDouble(prhs[3]) || !mxIsDouble(prhs[4])) {
-        mexErrMsgIdAndTxt(errId, "Block dimensions must be of datatype 'double'");
     }
 
     // Load mx gpu array objects
@@ -106,10 +99,7 @@ void mexFunction(int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[]) {
 
     sizes sz1 = {
     //define block and thread sizes
-    (unsigned long long)*(double*)mxGetData(prhs[2]),
-    (unsigned long long)*(double*)mxGetData(prhs[3]),
-    (unsigned long long)*(double*)mxGetData(prhs[4]),
-    
+   
     //Get the number of x/y/z threads
     dims_3[1],
     dims_3[0],
@@ -118,17 +108,8 @@ void mexFunction(int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[]) {
     dims_3[2] * dims_3[0] * dims_3[1]
     };
 
-    //round up to the nearest integer of the dimension length divided by the thread dimension
-    int blockx = sz1.imax/sz1.i + (sz1.imax % sz1.i != 0);
-    int blocky = sz1.jmax/sz1.j + (sz1.jmax % sz1.j != 0);
-    int blockz = sz1.kmax/sz1.k + (sz1.kmax % sz1.k != 0);
-
-    //grid and block 3D arrays
-    dim3    threads(sz1.i, sz1.j, sz1.k);
-    dim3    block(blockx, blocky, blockz);
-    size_t  total_threads = sz1.i * sz1.j * sz1.k;
-
     const mwSize* mnum = &sz1.M_numel;
+
     //Verify that inputs are correct classes before extracting the pointer.
     if (rfdims != 2) {
         mexErrMsgIdAndTxt(errId, "rfdata input must have 2 dimensions (more than 1 frame per function call is not supported)");
@@ -139,9 +120,6 @@ void mexFunction(int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[]) {
     if (mxGPUGetClassID(rfdata) != mxDOUBLE_CLASS) {
         mexErrMsgIdAndTxt(errId, "rfdata must have class 'double'");
     } 
-    if (total_threads > 1024 || total_threads <= 1) {
-        mexErrMsgIdAndTxt(errId, "Block dimensions product must be between 1 and 1024");
-    }
     if(dims_3[2] != 512) {
         mexErrMsgIdAndTxt(errId, "Incorrect number of sensors detected. The third dimension of the index matrix should be the number of sensors, 512. Contact the developer at caso.nathan@gmail.com if you are trying to use a different number of sensors.");
     }
@@ -158,11 +136,12 @@ void mexFunction(int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[]) {
     double*     img2_dvc    = (double*)(mxGPUGetData(img_2d));
 
     //Call the DAS Indexing kernel
-    DAS_Index_GPU<<<block, threads>>>(M_dvc, rfdata_dvc, img3_dvc, img2_dvc, sz1);
+    // DAS_Index_GPU<<<block, threads>>>(M_dvc, rfdata_dvc, img3_dvc, img2_dvc, sz1);
+    DAS_Index_GPU <<<sz1.xysize, 512>>> (M_dvc, rfdata_dvc, img3_dvc);
     cudaDeviceSynchronize();
 
     //Call the flattening kernel
-    DAS_3DSUM <<<sz1.xysize, 256, 256*sizeof(double)>>>(img3_dvc, img2_dvc, sz1);
+    DAS_3DSUM <<<sz1.xysize, 256, 256*sizeof(double)>>>(img3_dvc, img2_dvc);
     cudaDeviceSynchronize();
     
     //Get the result as a gpuArray
