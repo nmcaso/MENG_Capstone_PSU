@@ -15,12 +15,7 @@ struct DataSizes {
 void dasindex(unsigned int *M, double *rf, double* img_out, struct DataSizes sz)
 {
     
-    //memory indexing
-    for (int ii = 0; ii < sz.m_depth; ++ii) {
-        for(int jj = 0; jj < sz.image_elements; ++jj) {
-            *(img_out + jj) += *(rf + *(M + jj + sz.image_elements * ii));
-        }
-    }
+    
 
 }
 
