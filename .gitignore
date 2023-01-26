@@ -3,6 +3,7 @@
 02_Matlab (Sims)/
 06_Python/
 01_Background/
+07_Dissertation Paper/Latex Thesis/
 **/05_DataOut/
 *.bin
 *.pdb
@@ -12,3 +13,4 @@
 *.pptx
 *.docx
 *.pdf
+*.asv

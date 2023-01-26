@@ -1,5 +1,5 @@
             %% Setup
-            clear; clc;
+            clear; clc; close all;
             for folder = strtrim(string(ls('*0*'))).'
                 addpath(folder);
             end
@@ -7,15 +7,15 @@
             % Select the things to run:
 original        = true;
 ind_mat_vec     = true;
-ind_mat_element = true;
-ind_mat_halfvec = true;
+ind_mat_element = false;
+ind_mat_halfvec = false;
 ind_c           = true;
-ind_gpu_mat     = true;
-ind_gpu_cuda    = true;
-mmt_matlab      = true;
-mmt_gpu_matlab  = true;
+ind_gpu_mat     = false;
+ind_gpu_cuda    = false;
+mmt_matlab      = false;
+mmt_gpu_matlab  = false;
 
-compute_averages= true;
+compute_averages= false;
 nicerplots      = false;
 
 compile_c_mex   = false;
@@ -46,8 +46,13 @@ data        = data.rfcaster('double');
 sensarr     = SensorArray("leaf");
 interpolt   = false;
 
-mins        = -0.02; intval = 0.0001; maxs = -mins-intval;
-squarea     = ImageArea(maxs, mins, intval, maxs, mins, intval);
+mdl.xmin    = -0.01;                    mdl.xres    = 0.00001;
+mdl.xmax    = -mdl.xmin - mdl.xres;     mdl.ymin    = mdl.xmin;
+mdl.yres    = mdl.xres;                 mdl.ymax    = mdl.xmax;
+% mdl.zmin    = -0.015;                    mdl.zres    = 0.0002;
+% mdl.zmax    = -mdl.zmin - mdl.zres;
+
+squarea     = ImageArea(mdl);
 ind_mat     = IndexMatrix(sensarr,squarea,data, "index", interpolt); 
             disp("Time to make Index Matrix: " + ind_mat.Times.total)
 
@@ -79,7 +84,27 @@ MAT_VEC_IMG = DAS_index(data,ind_mat);
             time_matlab_vec = toc;
             disp("DAS Indexing (Matlab Fully Vectorized) time: " + time_matlab_vec)
 
-            nexttile; imagesc(abs(MAT_VEC_IMG)); colormap(pucolors.purplebone); 
+            switch ind_mat.type
+                case "Index2D"
+                
+                nexttile; imagesc(abs(MAT_VEC_IMG)); colormap(pucolors.purplebone);
+            
+                case "Index3D"
+                
+                max_intens = max(abs(MAT_VEC_IMG),[],'all'); 
+                num_intspts = 10;
+                intens_scale = max_intens/num_intspts:max_intens/num_intspts:max_intens;
+                alpha = (0:num_intspts-1)./num_intspts;
+%                 alpha = 500.^(alpha);
+%                 alpha = alpha./max(alpha);
+
+                queryPoints = linspace(min(intens_scale),max(intens_scale),256);
+                alphamap = interp1(intens_scale,alpha,queryPoints)';
+
+                volshow(abs(MAT_VEC_IMG), Alphamap=alphamap);
+
+            end
+            
             end
             
             %% Run half-vectorized function on CPU
@@ -133,13 +158,12 @@ smat        = gind_mat.M-1; % again, because C is zero-indexed
             nvidiaDev.wait(); %wait for the subtraction to end on all threads
 
             tic
-CUDA_IMG    = CUDA_DAS_index(smat, gleafdata.rfdata, 4, 4, 64);
+CUDA_IMG    = CUDA_DAS_index(smat, gleafdata.rfdata);
             time_cuda = toc; disp("GPU (CUDA) performance: " + time_cuda);
             % no nvidiaDev.wait() function necessary here; CUDA_DAS_index
             % includes the cuda device synchronization calrfdata      = mxGPUCreateFromMxArray(prhs[1]);ls.
 
-            nexttile; imagesc(abs(CUDA_IMG));
-            colormap(pucolors.cvidis);
+%             nexttile; imagesc(abs(CUDA_IMG)); colormap(pucolors.cvidis);
             end
 
             %% Run mmult DAS function normally on CPU
@@ -207,7 +231,7 @@ gpuind(aa)  = toc;
 smat        = gind_mat.M - 1; nvidiaDev.wait();
             for aa = 1:numavgs
             tic
-IMG6        = CUDA_DAS_index(smat, gleafdata.rfdata, 4, 4, 64);
+IMG6        = CUDA_DAS_index(smat, gleafdata.rfdata);
 cudaind(aa) = toc;
             end; disp("CUDA Indexing Complete");
 
@@ -224,7 +248,6 @@ IMG8        = DAS_mmult(gleafdata,gmul_mat,squarea);
 gpumult(aa) = toc;
             end; disp("MMULT GPU Completed\n")
 
-%%
 trunc       = 1;
 avg_iele    = sum(elemt(trunc:end))/(numavgs-trunc+1);
 avg_icpu    = sum(cpumnd(trunc:end))/(numavgs-trunc+1);
@@ -241,8 +264,8 @@ fprintf("Average processing time vectorized on CPU:     %.4f seconds.\n", avg_ic
 fprintf("Average processing time indexing with C MEX:   %.4f seconds.\n", avg_icpuc);
 fprintf("Average processing time indexing on GPU:       %.4f seconds.\n", avg_igpu);
 fprintf("Average processing time matrix mult CPU:       %.4f seconds.\n", avg_mcpu);
-fprintf("Average processing time matrix mult GPU:       %.4f seconds.\n", avg_mgpu);
-fprintf("Average processing time CUDA Indexing:         %.4f seconds.\n", avg_cuda);
+fprintf("Average processing time matrix mult GPU:       %.6f seconds.\n", avg_mgpu);
+fprintf("Average processing time CUDA Indexing:         %.6f seconds.\n", avg_cuda);
             end
             %% Figures
             if nicerplots && mmult_matlab 
@@ -287,7 +310,3 @@ daspect([1 1 1])
 % b.EdgeColor = 'interp';
 % 
 % colormap(pucolors.cvidis)
-
-            %% muck around with indices
-
-% imagesc(CUDA_DASIMG); colormap(pucolors.cvidis)
