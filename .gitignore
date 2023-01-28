@@ -3,7 +3,7 @@
 02_Matlab (Sims)/
 06_Python/
 01_Background/
-07_Dissertation Paper/Latex Thesis/
+07_Dissertation Paper/Latex Thesis/ZYoas_Example/
 **/05_DataOut/
 *.bin
 *.pdb
@@ -14,3 +14,13 @@
 *.docx
 *.pdf
 *.asv
+*.log
+*.aux
+*.db
+*.fls
+*.gz
+*.lof
+*.lot
+*.toc
+*.bst
+*.fdb*

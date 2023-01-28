@@ -1,0 +1,164 @@
+% PSU Thesis Collector - Nathan Caso, @ 2023
+
+%if you need the instructions, go to Zach's example and look at the instructions again.
+
+% Document class/type from psuthesis.cls:
+	\documentclass[draft,meng,12pt]{psuthesis}
+	%\documentclass[draft,honorsdepthead,honors]{psuthesis}
+	%\documentclass[draft,honors]{psuthesis}
+
+% Declare packages -----------------------------------
+	\usepackage{amsmath}
+	\usepackage{amssymb}
+	\usepackage{amsthm}
+	\usepackage{exscale}
+	\usepackage[mathscr]{eucal}
+	\usepackage{bm}
+	\usepackage{eqlist} % Makes for a nice list of symbols.
+	\usepackage[final]{graphicx}
+	\usepackage[dvipsnames]{color}
+	\DeclareGraphicsExtensions{.eps, .pdf, .png, .jpg}
+	\usepackage[utf8]{inputenc}
+	\usepackage[autostyle]{csquotes}
+	\usepackage{amsfonts}
+	\usepackage[english]{babel}
+	\usepackage[margin=1.0in]{geometry}
+	\usepackage{mathrsfs}
+	\usepackage{ulem}
+	\usepackage{booktabs}
+	\usepackage{subcaption}
+	\usepackage{epstopdf}
+	\usepackage{xcolor}
+	\usepackage{outline}
+	\usepackage{textcomp}
+	\usepackage{xfrac}
+	\usepackage{graphicx}
+	\usepackage{mathtools}
+	\usepackage{tikz}
+	\usepackage{minted}
+	\usepackage{algorithm}
+	\usepackage{algpseudocode}
+	\usepackage [super,square]{natbib}
+	\usepackage{hyperref}
+
+%Theorem declaration -----------------------------------
+	\newtheorem{theorem}{Theorem}[section]
+	\newtheorem{lemma}[theorem]{Lemma}
+	\newtheorem{proposition}[theorem]{Proposition}
+	\newtheorem{corollary}[theorem]{Corollary}
+	\newtheorem{remark}[theorem]{Remark}
+
+%Environment declarations -----------------------------------
+	\newenvironment{definition}[1][Definition]{\begin{trivlist}
+			\item[\hskip \labelsep {\bfseries #1}]}{\end{trivlist}}
+	\newenvironment{example}[1][Example]{\begin{trivlist}
+			\item[\hskip \labelsep {\bfseries #1}]}{\end{trivlist}}
+
+%Command declarations -----------------------------------
+	\newcommand{\vbold}{\bold{v}}
+	\newcommand{\mat}[1]{{\bm{\mathrm{#1}}}}
+	\renewcommand{\vec}[1]{{\bm{\mathrm{#1}}}}
+	\newcommand{\dep}[1]{\hskip-.25em\left(#1\right)}
+	\newcommand{\tdep}{\dep{t}}
+	\newcommand{\omdep}{\dep{\omega}}
+	\newcommand{\fdep}{\dep{f}}
+	\newcommand{\diffd}{\mathrm{d}}
+	\newcommand{\R}{\mathbb{R}}
+	\newcommand{\N}{\mathbb{N}}
+	\newcommand{\Z}{\mathbb{Z}}
+	\newcommand{\dvar}{\zeta}
+	\newcommand{\rvar}{\xi}
+	\newcommand\undermat[2]{
+		\makebox[0pt][l]{$\smash{\underbrace{\phantom{%
+					\begin{matrix}#2\end{matrix}}}_{\text{$#1$}}}$}#2}
+	\renewcommand{\sectionautorefname}{\S}
+
+%Color Declarations -----------------------------------
+	\definecolor{gold}{rgb}{1.,0.84,0.}
+	\definecolor{bg}{rgb}{0.95,0.95,0.95}
+
+% fancy chapter titles -----------------------------------
+	\usepackage[Lenny]{fncychap}
+	\ChTitleVar{\Huge\sffamily\bfseries}
+
+% special stuff user input -----------------------------------
+	\input{SupplementaryMaterial/UserDefinedCommands}
+
+%Renewed Float Parameters -----------------------------------
+	\renewcommand{\floatpagefraction}{0.85}
+	\renewcommand{\topfraction}      {0.85}
+	\renewcommand{\bottomfraction}   {0.85}
+	\renewcommand{\textfraction}     {0.15}
+
+%Front Matter, Title page: -----------------------------------
+	\title{Parallelization of Delay and Sum Algorithm for Photoacoustic Applications}
+	\author{Nathan M. Caso}
+	\dept{Acoustics}
+	\degreedate{May 2023} 
+	\copyrightyear{2023}
+	\documenttype{Capstone Project}
+	\submittedto{The Graduate School}
+	\gradprogram{Graduate Program in Acoustics}
+
+% Signatury Page: -----------------------------------
+% declare the number of readers
+	\numberofreaders{1}
+
+	% Declaration of advisors and readers
+	\advisor[Thesis Advisor]
+	{Yun Q. Jing}
+	{Associate Professor of Acoustics}
+
+	\readerone[]
+	{Victor W. Sparrow}
+	{Professor of Acoustics\\[-1mm] Director, Graduate Program in Acoustics}
+
+% declaration for included chapters: ----------------
+\includeonly{
+	Chapter-1/Chapter-1,%
+	Chapter-2/Chapter-2,%
+	Chapter-3/Chapter-3,%
+	Chapter-4/Chapter-4,%
+	Chapter-5/Chapter-5,%
+	Appendix-A/Appendix-A,%
+}
+
+%The document itself, finally -----------------------------------
+\begin{document}
+	
+	\frontmatter
+	\psutitlepage
+	\psusigpage
+	\psupermissionpage %currently broken
+
+	\thesisabstract{SupplementaryMaterial/Abstract}
+	
+	\thesistableofcontents
+	\thesislistoffigures
+	\thesislistoftables
+	\thesislistofsymbols{SupplementaryMaterial/ListOfSymbols}
+	\thesisacknowledgments{SupplementaryMaterial/Acknowledgments}
+		
+	\thesismainmatter
+	\allowdisplaybreaks{
+		% Chapters
+		\include{Chapter-1/Chapter-1}
+		\include{Chapter-2/Chapter-2}
+		\include{Chapter-3/Chapter-3}
+		\include{Chapter-4/Chapter-4}
+		\include{Chapter-5/Chapter-5}
+		
+		\appendix		
+		\include{Appendix-A/Appendix-A}
+		%\include{Appendix-B/Appendix-B}
+
+		% Bibliography
+		% \begin{singlespace}
+		% 	\bibliographystyle{FG-bibstyle}
+		% 	\addcontentsline{toc}{chapter}{Bibliography}
+		% 	\bibliography{Biblio-Database}
+		% \end{singlespace}
+			
+		\backmatter
+		
+\end{document}

@@ -1,0 +1,4 @@
+% Abstract:
+The fields of both Photoacoustics and Ultrasound use several methods of imaging algorithms to beamform timeseries data from a device's transducers into an image. The simplest of these methods is Delay-and-Sum (DAS), wherein the algorithm applies a delay proportional to the distance from an imaging plane to a plane of potential point sources. If done for every sensor using a 2-Dimensional plane of point sources and subsequently averaged across sensors, the result is an image of the sources in the plane.
+
+Modern Photoacoustic problems require fast imaging techniques for example when examining tissue real-time, for example to see the relative levels of blood oxygenation spreading through a set of blood vessels. The computational routines must keep pace. This project introduces a MATLAB-compatible toolbox of fast delay-and-sum algotithms parallelized for GPU computation.
