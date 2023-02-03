@@ -156,6 +156,45 @@ methods
 
             obj.Times.total = obj.Times.phaseadd+obj.Times.allind+obj.Times.rays+obj.Times.dims;
             
+            case "PerspectiveRotate"
+            obj.type = "Index2D";
+            tic;
+
+            frame_size          = uint32(size(dataset.rfdata,1));
+            lxar                = length(imagearea.x_arr);
+            lx0                 = length(sensorarray.x0);
+            lyar                = length(imagearea.y_arr);
+            [theta, ~]          = cart2pol(sensorarray.x0, sensorarray.z0);
+            theta               = -theta*180/pi;
+
+            if lxar ~= lyar
+                error("This method is only supported for square arrays currently")
+            end
+
+            Lx = abs(imagearea.x_arr(1)) + abs(imagearea.x_arr(end));
+            Ly = abs(imagearea.y_arr(1)) + abs(imagearea.y_arr(end));
+            dx = Lx/(lxar-1);
+            dy = Ly/(lyar-1);
+    
+            expansion_factor = sqrt(2);
+            inflated.x_arr = imagearea.x_arr(1)*expansion_factor:dx:imagearea.x_arr(end)*expansion_factor;
+            inflated.y_arr = imagearea.y_arr(1)*expansion_factor:dy:imagearea.y_arr(end)*expansion_factor;
+            delay_matrix = uint32(sqrt((inflated.x_arr-sensorarray.x0(1)).^2+(inflated.y_arr.'-sensorarray.z0(1)).^2)/dataset.c/dataset.dt);
+
+            obj.M = zeros(lxar, lyar, lx0, 'uint32');
+            for ii = 1:lx0
+            phase = (ii-1)*frame_size;
+            rotated_img = imrotate(delay_matrix, 90-theta(ii) ,'bilinear','crop');
+            
+            c_size = floor((size(rotated_img) - [lxar, lyar]) / 2);
+            xind_vec = c_size(1):c_size(1) + lxar-1;
+            yind_vec = c_size(2):c_size(2) + lyar-1;
+            
+            obj.M(:,:,ii) = phase + rotated_img(xind_vec, yind_vec);
+            end
+
+%             obj.M(obj.M == 0) = 1;
+            obj.Times.total = toc;
         end
 
     end

@@ -6,10 +6,12 @@
 
             % Select the things to run:
 original        = true;
-ind_mat_vec     = true;
+framerotate     = true;
+framerotate_gpu = true;
+ind_mat_vec     = false;
 ind_mat_element = false;
 ind_mat_halfvec = false;
-ind_c           = true;
+ind_c           = false;
 ind_gpu_mat     = false;
 ind_gpu_cuda    = false;
 mmt_matlab      = false;
@@ -21,8 +23,12 @@ nicerplots      = false;
 compile_c_mex   = false;
 compile_cuda_mex= false;
 
-numimgs         = ind_mat_vec + ind_mat_halfvec + ind_mat_element + ind_c + ind_gpu_mat + ind_gpu_cuda ...
-                    + mmt_matlab + mmt_gpu_matlab + original;
+switches        = [ind_mat_vec ind_mat_halfvec ind_mat_element ind_c ind_gpu_mat ind_gpu_cuda ...
+                   mmt_matlab mmt_gpu_matlab original framerotate framerotate_gpu];
+gpu_switches    = [ind_gpu_mat ind_gpu_cuda mmt_gpu_matlab framerotate_gpu];
+no_ind_matrix   = [original framerotate framerotate_gpu];
+
+numimgs         = sum(switches);
 
             %% Compile MEX function(s) if desired
 
@@ -37,8 +43,6 @@ copyfile([folder(1:46) '03_C++\MEX Functions\gpudasindex.cu'])
             mexcuda "gpudasindex.cu" COPTIMFLAGS="-O3 -fwrapv" -output CUDA_DAS_index
             end
 
-figure;
-
             %% Create Dataset, imaging area, and delay matrix
 nvidiaDev   = gpuDevice;
 data        = Dataset("leaf",0); 
@@ -46,19 +50,23 @@ data        = data.rfcaster('double');
 sensarr     = SensorArray("leaf");
 interpolt   = false;
 
-mdl.xmin    = -0.01;                    mdl.xres    = 0.00001;
+mdl.xmin    = -0.025;                   mdl.xres    = 0.0002;
 mdl.xmax    = -mdl.xmin - mdl.xres;     mdl.ymin    = mdl.xmin;
 mdl.yres    = mdl.xres;                 mdl.ymax    = mdl.xmax;
 % mdl.zmin    = -0.015;                    mdl.zres    = 0.0002;
 % mdl.zmax    = -mdl.zmin - mdl.zres;
 
 squarea     = ImageArea(mdl);
-ind_mat     = IndexMatrix(sensarr,squarea,data, "index", interpolt); 
-            disp("Time to make Index Matrix: " + ind_mat.Times.total)
 
-            if ind_gpu_cuda || ind_gpu_mat || mmt_gpu_matlab || compute_averages
+            if any(switches(1:8))
+ind_mat     = IndexMatrix(sensarr, squarea, data, "index", interpolt); 
+            disp("Time to make Index Matrix: " + ind_mat.Times.total)
+            end
+
+            if any(gpu_switches) || compute_averages
+gpudata     = data.gpuDataSet;
+            elseif any(gpu_switches) && any(switches(1:8))
 gind_mat    = ind_mat.Send2GPU;
-gleafdata   = data.gpuDataSet;
             end
             if mmt_matlab || compute_averages
 mult_mat    = IndexMatrix(sensarr,squarea,data,"matrix", interpolt); disp("Time to make MMT Matrix: " + mult_mat.Times.total);
@@ -67,14 +75,34 @@ mult_mat    = IndexMatrix(sensarr,squarea,data,"matrix", interpolt); disp("Time 
 gmul_mat    = mult_mat.Send2GPU;
             end
 
-            %% Run the original DAS function without any optimization
+            %% Run the original DAS function without optimization
             if original
             tic
 MAT_ORIGIN  = DAS_original(data, squarea, sensarr);
             time_orig = toc;
             disp("Original function time: " + time_orig)
+colormax    = max(abs(MAT_ORIGIN),[],'all');
 
-            nexttile; imagesc(abs(MAT_ORIGIN)); colormap(pucolors.purplebone); 
+            nexttile; imagesc(MAT_ORIGIN); colormap(pucolors.seismic); clim([-colormax colormax]) 
+            end
+            %% Frame rotate on CPU
+            if framerotate
+            tic
+MAT_ROTATE  = DAS_frame_rotate(data, squarea, sensarr, 8.7, true);
+            time_frotate = toc;
+            disp("Frame Rotation time: " + time_frotate)
+
+            nexttile; imagesc(abs(MAT_ROTATE)); colormap(pucolors.purplebone); 
+            end
+            %% Frame rotate on GPU
+            if framerotate_gpu
+            tic
+MAT_GPU_ROT = DAS_frame_rotate(gpudata, squarea, sensarr, 8.7, true);
+            time_gpu_frotate = toc;
+            disp("GPU Frame Rotation time: " + time_gpu_frotate)
+            colormax = gather(max(abs(MAT_GPU_ROT),[],'all'));
+
+            nexttile; imagesc(MAT_GPU_ROT); colormap(pucolors.seismic); clim([-colormax colormax]) 
             end
 
             %% Run indexing function normally on CPU
@@ -144,7 +172,7 @@ nexttile; imagesc(abs(C_IMAGE)); colormap(pucolors.cvidis);
 
             %% Run indexing function on GPU
             if ind_gpu_mat
-MAT_GPU_IMG = DAS_GPU_index(gleafdata, gind_mat);
+MAT_GPU_IMG = DAS_GPU_index(gpudata, gind_mat);
             nvidiaDev.wait();
             time_gpu = toc;
             disp("GPU (Matlab) performance: " + time_gpu)
@@ -158,7 +186,7 @@ smat        = gind_mat.M-1; % again, because C is zero-indexed
             nvidiaDev.wait(); %wait for the subtraction to end on all threads
 
             tic
-CUDA_IMG    = CUDA_DAS_index(smat, gleafdata.rfdata);
+CUDA_IMG    = CUDA_DAS_index(smat, gpudata.rfdata);
             time_cuda = toc; disp("GPU (CUDA) performance: " + time_cuda);
             % no nvidiaDev.wait() function necessary here; CUDA_DAS_index
             % includes the cuda device synchronization calrfdata      = mxGPUCreateFromMxArray(prhs[1]);ls.
@@ -179,7 +207,7 @@ MAT_MUL_IMG = DAS_mmult(data, mult_mat, squarea);
             %% Run mmult DAS function on GPU
             if mmt_gpu_matlab
             tic
-MAT_MUL_GPU = DAS_mmult(gleafdata,gmul_mat,squarea);
+MAT_MUL_GPU = DAS_mmult(gpudata,gmul_mat,squarea);
             nvidiaDev.wait();
             time_mmult_gpu = toc;
             disp("GPU MMULT Time: " + time_mmult_gpu)
@@ -223,7 +251,7 @@ cpucnd(aa)  = ccputime;
 
             for aa = 1:numavgs %Normal indexing function on GPU
             tic
-IMG5        = DAS_GPU_index(gleafdata, gind_mat);
+IMG5        = DAS_GPU_index(gpudata, gind_mat);
             nvidiaDev.wait();
 gpuind(aa)  = toc;
             end; disp("Indexing GPU Completed")
@@ -231,7 +259,7 @@ gpuind(aa)  = toc;
 smat        = gind_mat.M - 1; nvidiaDev.wait();
             for aa = 1:numavgs
             tic
-IMG6        = CUDA_DAS_index(smat, gleafdata.rfdata);
+IMG6        = CUDA_DAS_index(smat, gpudata.rfdata);
 cudaind(aa) = toc;
             end; disp("CUDA Indexing Complete");
 
@@ -243,7 +271,7 @@ cpumult(aa) = toc;
 
             for aa = 1:numavgs %Sparse Matrix Multiplication on GPU
             tic;
-IMG8        = DAS_mmult(gleafdata,gmul_mat,squarea);
+IMG8        = DAS_mmult(gpudata,gmul_mat,squarea);
             nvidiaDev.wait();
 gpumult(aa) = toc;
             end; disp("MMULT GPU Completed\n")
@@ -268,16 +296,16 @@ fprintf("Average processing time matrix mult GPU:       %.6f seconds.\n", avg_mg
 fprintf("Average processing time CUDA Indexing:         %.6f seconds.\n", avg_cuda);
             end
             %% Figures
-            if nicerplots && mmult_matlab 
-mx1 = max(max(DASIMG));
-mx2 = max(max(MAT_MUL_IMG));
+            if nicerplots  
+mx1 = gather(max(abs(MAT_GPU_ROT),[],'all'));
+mx2 = max(MAT_ORIGIN,[],'all');
 
-noninterp = abs(DASIMG/mx1); %normalize
-interpmm  = abs(MAT_MUL_IMG/mx2);
+interp_rot  = abs(MAT_GPU_ROT/mx1);
+original = abs(MAT_ORIGIN/mx2); %normalize
 
 a = 3;
-nonintlog = mx1*(log10(1+a*noninterp)./log10(1+a));
-yesintlog = mx2*(log10(1+a*interpmm)./log10(1+a));
+nonintlog = mx1*(log10(1+a*original)./log10(1+a));
+yesintlog = mx2*(log10(1+a*interp_rot)./log10(1+a));
 
 figure; subplot(1,2,1)
 imagesc(nonintlog); colormap(pucolors.cvidis);
@@ -285,28 +313,6 @@ subtitle("Indexed, not Interpolated")
 daspect([1 1 1])
 subplot(1,2,2)
 imagesc(yesintlog); colormap(pucolors.cvidis);
-subtitle("Matrix Mult, Interpolated")
+subtitle("Rotating Delay Matrix Method, Interpolated")
 daspect([1 1 1])
             end
-
-%             %% Backtrack from kspace
-% KDASIMG     = fftshift(fftn(fftshift(DASIMG)));
-% 
-% [xmesh, ymesh] = meshgrid(area1.x_arr, area1.y_arr);
-% [thmesh, rmesh] = cart2pol(xmesh, ymesh);
-% 
-% figure; tiledlayout(1,3); nexttile;
-% a = pcolor(thmesh, rmesh, 20*log10(abs(KDASIMG)));
-% a.EdgeColor = 'interp';
-% 
-% leafpad     = [flip(leafdata.rfdata);leafdata.rfdata];
-% leafk       = fftn(leafpad);
-% 
-% nexttile;
-% c = imagesc(20*log10(abs(KDASIMG)));
-% 
-% nexttile;
-% b = pcolor(20*log10(abs(leafk)));
-% b.EdgeColor = 'interp';
-% 
-% colormap(pucolors.cvidis)
