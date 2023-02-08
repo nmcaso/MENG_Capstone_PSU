@@ -29,24 +29,24 @@ classdef ImageArea
                         error("Bad input arguments. The structure fields must be: xmin, xres, xmax, ymin, yres, ymax, and optionally zmin, zres, zmax");
                     end
 
-                    obj.x_arr = (model.xmin:model.xres:model.xmax).';
-                    obj.y_arr = (model.ymin:model.yres:model.ymax).';
+                    obj.x_arr = double(model.xmin:model.xres:model.xmax).';
+                    obj.y_arr = double(model.ymin:model.yres:model.ymax).';
                     
                     if length(input_fields) == 9
-                        obj.z_arr = (model.zmin:model.zres:model.zmax).';
+                        obj.z_arr = double(model.zmin:model.zres:model.zmax).';
                     else
                         obj.z_arr = [];
                     end
 
                 case 6
                 
-                obj.x_arr = (xmin:xres:xmax).';
-                obj.y_arr = (ymin:yres:ymax).';
+                obj.x_arr = double(xmin:xres:xmax).';
+                obj.y_arr = double(ymin:yres:ymax).';
                 obj.z_arr = [];
 
                 case 9
                     
-                obj.z_arr = (zmin:zres:zmax).';
+                obj.z_arr = double(zmin:zres:zmax).';
 
                 otherwise
                     

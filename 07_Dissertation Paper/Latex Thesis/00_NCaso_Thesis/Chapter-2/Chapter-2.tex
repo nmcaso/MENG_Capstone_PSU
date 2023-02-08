@@ -1,9 +1,46 @@
-\chapter{Theory}
-\label{chapter2:theory}
+\chapter{Background}
+\label{chapter2:background}
 \graphicspath{{Chapter-2/graphics/}}
 
+\section{Delay and Sum Overview}
+\label{chapter2:das_Overview}
+The simplest example of Delay-and-Sum beamforming is described with a 1-Dimensional array of sensors. Let an incident plane-wave intersect with the sensor array at an angle $\theta$. If every sensor records a time-series signal, the incident wave will appear at different times across the sensor array. To determine the incident angle $\theta$, one only needs two transducers, the distance between them, $L_x$, and the speed of sound $c$. Suppose the time delays from each sensor are $t_1$ and $t_2$:
 
-% more examples:
-% \section{Overview}
-% \label{chapter2:Overview}
-% The objective of this cha
+\begin{center} $\theta = cos^{-1}(\frac{t_2 - t_1}{c L_x})$ \end{center}
+
+This result can identify the incident angle for a relative time-delay, but what if there are several incident waves? In this case, it is better to compare the spatially constructive signal amplitudes of the signal at several places. This is done by solving the above equation for the relative delay $t_2 - t_1$ for many angles $\theta_i$, and taking the signal amplitude at those delays:
+
+\begin{center} $t_{delay,i} = \frac{L_x}{c} cos(\theta_i)$ \end{center}
+
+This equation is still in polar coordinates, in terms of $\theta_i$. A cartesian form may also be derived to solve for $t_{delay,i}$ using trigonometry, given a set of points $(x_i,z)$ to calculate the image at, assuming a constant depth $z$:
+ 
+\begin{center} $t_{delay,i} = \frac{1}{c} \sqrt{(x_i - x_0)^2 + z^2}$ \end{center}
+
+The distance between sensor elements is now accounted for in the positions of $x_i$, that is, $\Delta{x} = x_{i+1} - x_i$.
+
+Next, the contribution from one sensor to the final image is calculated by delaying that sensor's signal by the set of delays we calculated $t_{delay,i}$, (the "delay" in "delay and sum"). Repeat this process for each sensor, adding the beamformed signal amplitudes (the "sum" from "delay and sum") from each sensor together, to create the final image. For a 1-dimensional array and imaging area, the image will be 1-dimensional.
+
+\section{DAS with Delay Matrix}
+\label{chapter2:delay_matrix}
+
+The process above can be organized with a "delay matrix", so as to coalesce data for optimal performance. The Delay-Matrix matrix is n+1-dimensional for an n-dimensional array of sensors, and contains a map of the relative delays between each pixel's location and the sensor arrays' location for each sensor. It uses the distance formula at every point in the list and at every sensor location. For a spatial vector $\vv{r}$ containing the coordinates of the desired imaging locations and a spatial vector $\vv{x}$ containing sensor coordintaes, and for the $k^{th}$ sensor: 
+
+$M_{\vv{r},k}(t) = \frac{1}{c} || \vv{r_k} - \vv{x_k}||_2$
+
+Where $||\cdot||$ denotes the $l_2$ norm, or distance formula. To beamform the array of signals in a discrete environment, the time-delays must be translated into delay indices. For a digital system with sampling rate $f_s$, time increment $\Delta{t} = \frac{1}{f_s}$:
+
+$M_{\vv{r},k}(i) = \frac{1}{\Delta{t}} \times M_{\vv{r},k}(t)$
+
+The delay matrix can be used to efficiently delay the time signals using indexing. The output for an n-dimensional array of sensors is a n+1-dimensional array of beamformed signals that represent the amplitude contributions of each sensor to the virtual locations specified in the list of points, $\vv{r}$
+
+\section{DAS by Matrix Multiplication}
+\label{chapter2:mmult_das}
+
+\section{DAS for Large Images}
+\label{chapter2:large_images}
+
+\section{Optimizing DAS Code}
+\label{chapter2:optimizing}
+
+\section{GPU Acceleration}
+\label{chapter2:gpu_accel}

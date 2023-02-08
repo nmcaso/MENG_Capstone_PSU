@@ -6,19 +6,18 @@
 \section{Background of Photoacoustics}
 \label{chapter1:backg_photoacoustics}
 
-Photoacoustic Tomography (PAT) is an emergent modality of sonic body imaging wherein a tissue is irradiated with a laser pulsed at an ultrasonic frequency. Tissues in the body with a high absorption coefficient for the laser's wavelength absorb energy and increase in temperature and thermally expand, and contract, at the pulse rate. For a point scatterer in the tissue, this behavior induces a monopole-like acoustic sound source, which may be detected at the surface of the tissue by an ultrasound transceiver device.
+Photoacoustic Tomography (PAT) is an emergent modality of sonic body imaging wherein a tissue is irradiated with a laser pulsed at an ultrasonic frequency. Tissues in the body with a high absorption coefficient for the laser's wavelength absorb energy and increase in temperature and thermally expand, and contract, at the pulse rate. For a point scatterer in the tissue, this behavior induces a monopole-like acoustic sound source, which may be detected at the surface of the tissue by an ultrasound transducer and recorded. The recorded signals, known as 'rfdata' in a nod to radio-frequency imaging, may be manipulated to reveal the image of the source from the perspective of the transducers. The advantage of PAT over conventional ultrasound is the lack of a need to transmit an acoustic signal in addition to detecting it.
+
+Photoacoustic imaging has numerous applications in modern medicine. For example, using 2 laser wavelengths can take advantage of wavelength-dependent absorption coefficients for different levels of blood oxygenation, effectively revealing hypoxia conditions. PAT also has the ability to construct 3D images. Recent works have also demonstrated the capacity for PAT to be enhanced by microbubles as virtual point-sources.
+
+Imaging algorithms for PAT are typically grouped into the categories of back-projection and model-based methods. The simplest algorithm is a back-projection method, Delay and Sum (DAS) beamforming, wherein a time-delay is applied to the signals proportional to its distance from each element of a transducer array. The algorithm is simple, and therefore has a high potential for exploiting parallelization in both interpreted and compiled computer languages such as MATLAB and C++.
 
 \section{Problem Statement}
 \label{chapter1:problem_statement}
 
+The goal of this project is to explore methods of speeding up the Delay and Sum algorithm to maximize frame-rate for photoacoustic imaging applications. The more efficiently that one can translate signal data into images, the higher resolutions one can achieve in the same amount of time; which leads to more accurate detection of subcutaneous anomolies. To achieve this end, the major comparison is primarily between code in MATLAB, code in C/C++, and Graphics-Processing-Unit (GPU) parallelized code written in CUDA.
 
-% figure example:
-% \begin{figure}[htb]
-% 	\centering
-% 	\includegraphics[width=\textwidth]{Chapter-1/graphics/Trailing Edge Schematic.PNG}
-% 	\caption{Schematic of the turbulent boundary, formed on a single side of the airfoil for clarity, and trailing edge noise}
-% 	\label{fig::Trailing_Edge_Noise_Schematic}
-% \end{figure} 
+\section{Layout}
+\label{chapter1:layout}
 
-% Citation example:
-% Cavaleri et al.\cite{cavalieri2016numerical} 
+This section describes the layout of the remaining content of this paper. Chapter 2, Background, explains the details of the DAS algorithm and the three predominant methods that this paper explores. Chapter 2 also provides background on GPU accelerated coding in both MATLAB and nVIDIA's CUDA C language. Chapter 3, Methodology and Results, describes the detailed methodology of programming each algorithm, and the parameters for comparison. Chapter 4, Discussion, summarizes the contributions of this project and suggests several areas for further exploration. The appendices provide source code for each of the methods and several discontinued areas of experimentation.

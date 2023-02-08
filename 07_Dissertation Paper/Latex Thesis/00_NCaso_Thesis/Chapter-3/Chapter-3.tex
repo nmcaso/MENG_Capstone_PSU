@@ -1,8 +1,54 @@
-\chapter{Methodology}
+\chapter{Methods and Results}
 \label{chapter3:Methodology}
 \graphicspath{{Chapter-3/graphics/}}
 
 \section{Approach}
 \label{chapter3:approach}
+
+The project generally followed this structure:
+\begin{enumerate}
+    \item Develop intuitive DAS algorithms in MATLAB
+    \item Develop optimized DAS algorithms in MATLAB
+    \item Develop parallelized DAS algorithms in MATLAB
+    \item Develop C/C++ DAS Algorithm
+    \item Develop CUDA C/C++ algorithm
+    \item Compile MEX functions for both the C/C++ and CUDA algorithms
+    \item Develop algorithm for large imaging regions
+\end{enumerate}
+
+\section{Algorithms in MATLAB}
+\label{chapter3:matlab_code}
+
+Arguably, the more intuitive algorithms in MATLAB include highly-elemental for-loops. Despite being easy to read, they are notoriously slow due to compile-time overhead. Following good coding practice, this paper will start with the more-intuitive but slower elemental loops, and build towards faster optimization later.
+
+The simplest method is to create the delay matrix for one transducer's location, and index this into the time-series signal for that sensor, creating an image from one sensor. Repeat this for every transducer, adding the images together:
+
+\begin{algorithm} [H]
+\parindent4em
+\normalem
+\caption{Elemental DAS}\label{algo:elemental_das}
+    \KwIn{range $\overrightarrow{x}$, range $\overrightarrow{y}$, sensor positions $\overrightarrow{x_{0}}, \overrightarrow{x_{0}}$ Signal Matrix $S\in [L_{frame} \times n_{sens}]$}
+    \KwOut{Beamformed Image $B\in[L_x \times L_y]$}
+    $S_{L_f,n_{sens}} \gets$ rfdata\;
+    $Img \gets $zeros\;
+    \For{$k \gets 1$ \KwTo $n_{sens}$}{
+        \For{$i \in \overrightarrow{x} , j \in \overrightarrow{y}$}{
+            $M_{ij} \gets \sqrt{(\overrightarrow{x}_i-x_{0_k})^2 + (\overrightarrow{y}_j-z_{0_k})^2}$\;
+            $M_{ij} \gets M_{ij} \times \frac{1}{c\times dt}$\;
+        }
+        \For{$i \in \overrightarrow{x} , j \in \overrightarrow{y} $} {
+            $B_{ij} \gets B_{ij} + S_{M_{ij}k}$\;
+        }
+    }
+    $B \gets \frac{Img}{n_{sens}}$\;
+\end{algorithm}
+
+
+\section{Optimized Algorithms for MATLAB}
+\label{chapter3:optimized_matlab}
+
+\section{Parallelized Algorithms in MATLAB}
+\label{chapter3:parallel_matlab}
+
 
 \newpage

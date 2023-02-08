@@ -5,9 +5,10 @@
             end
 
             % Select the things to run:
-original        = true;
-framerotate     = true;
-framerotate_gpu = true;
+original        = false;
+mex_original    = true;
+framerotate     = false;
+framerotate_gpu = false;
 ind_mat_vec     = false;
 ind_mat_element = false;
 ind_mat_halfvec = false;
@@ -20,13 +21,14 @@ mmt_gpu_matlab  = false;
 compute_averages= false;
 nicerplots      = false;
 
+compile_mex_or  = true;
 compile_c_mex   = false;
 compile_cuda_mex= false;
 
 switches        = [ind_mat_vec ind_mat_halfvec ind_mat_element ind_c ind_gpu_mat ind_gpu_cuda ...
-                   mmt_matlab mmt_gpu_matlab original framerotate framerotate_gpu];
+                   mmt_matlab mmt_gpu_matlab original mex_original framerotate framerotate_gpu];
 gpu_switches    = [ind_gpu_mat ind_gpu_cuda mmt_gpu_matlab framerotate_gpu];
-no_ind_matrix   = [original framerotate framerotate_gpu];
+no_ind_matrix   = [original mex_original framerotate framerotate_gpu];
 
 numimgs         = sum(switches);
 
@@ -36,6 +38,11 @@ numimgs         = sum(switches);
 folder      = pwd;
 copyfile([folder(1:46) '03_C++\MEX Functions\DAS_Index.c'])
              mex "DAS_Index.c" -I"C:\Program Files\MATLAB\R2022b\extern\include" COPTIMFLAGS="-fwrapv" -output dasindex
+            end
+            if compile_mex_or
+folder      = pwd;
+copyfile([folder(1:46) '03_C++\MEX Functions\DAS_Index_Original.cpp'])
+            mex "DAS_Index_Original.cpp" -I"C:\Program Files\MATLAB\R2022b\extern\include" COPTIMFLAGS="-O3 -fwrapv" -output dasindex_original
             end
             if compile_cuda_mex
 folder      = pwd;
@@ -47,14 +54,14 @@ copyfile([folder(1:46) '03_C++\MEX Functions\gpudasindex.cu'])
 nvidiaDev   = gpuDevice;
 data        = Dataset("leaf",0); 
 data        = data.rfcaster('double');
-sensarr     = SensorArray("leaf");
+sensarr     = SensorArray("leaf"); sensarr.x0 = double(sensarr.x0); sensarr.z0 = double(sensarr.z0);
 interpolt   = false;
 
-mdl.xmin    = -0.025;                   mdl.xres    = 0.0002;
+mdl.xmin    = -0.02;                    mdl.xres    = 0.0001;
 mdl.xmax    = -mdl.xmin - mdl.xres;     mdl.ymin    = mdl.xmin;
 mdl.yres    = mdl.xres;                 mdl.ymax    = mdl.xmax;
-% mdl.zmin    = -0.015;                    mdl.zres    = 0.0002;
-% mdl.zmax    = -mdl.zmin - mdl.zres;
+mdl.zmin    = -0.01;                    mdl.zres    = 0.001;
+mdl.zmax    = -mdl.zmin - mdl.zres;
 
 squarea     = ImageArea(mdl);
 
@@ -85,6 +92,18 @@ colormax    = max(abs(MAT_ORIGIN),[],'all');
 
             nexttile; imagesc(MAT_ORIGIN); colormap(pucolors.seismic); clim([-colormax colormax]) 
             end
+
+            %% DAS original function compiled
+            if mex_original
+            tic
+MAT_MEX_ORI = dasindex_original(data, squarea, sensarr, 0);
+            time_compiled_orig = toc;
+            disp("Compiled Original DAS function: " + time_compiled_orig);
+colormax    = max(abs(MAT_MEX_ORI),[],'all');
+
+            nexttile; imagesc(MAT_MEX_ORI); colormap(pucolors.seismic);
+            end
+
             %% Frame rotate on CPU
             if framerotate
             tic
@@ -97,14 +116,13 @@ MAT_ROTATE  = DAS_frame_rotate(data, squarea, sensarr, 8.7, true);
             %% Frame rotate on GPU
             if framerotate_gpu
             tic
-MAT_GPU_ROT = DAS_frame_rotate(gpudata, squarea, sensarr, 8.7, true);
+MAT_GPU_ROT = DAS_frame_rotate(gpudata, squarea, sensarr, 0, true);
             time_gpu_frotate = toc;
             disp("GPU Frame Rotation time: " + time_gpu_frotate)
             colormax = gather(max(abs(MAT_GPU_ROT),[],'all'));
 
             nexttile; imagesc(MAT_GPU_ROT); colormap(pucolors.seismic); clim([-colormax colormax]) 
             end
-
             %% Run indexing function normally on CPU
             if ind_mat_vec
             tic;
@@ -123,13 +141,15 @@ MAT_VEC_IMG = DAS_index(data,ind_mat);
                 num_intspts = 10;
                 intens_scale = max_intens/num_intspts:max_intens/num_intspts:max_intens;
                 alpha = (0:num_intspts-1)./num_intspts;
-%                 alpha = 500.^(alpha);
-%                 alpha = alpha./max(alpha);
+                alpha = 100.^(alpha);
+                alpha = alpha./max(alpha);
 
                 queryPoints = linspace(min(intens_scale),max(intens_scale),256);
                 alphamap = interp1(intens_scale,alpha,queryPoints)';
 
-                volshow(abs(MAT_VEC_IMG), Alphamap=alphamap);
+
+view        = viewer3d(BackgroundColor="white", BackgroundGradient=false, Lighting="off");
+            volshow(abs(MAT_VEC_IMG), Alphamap=alphamap, Parent=view);
 
             end
             
@@ -191,7 +211,7 @@ CUDA_IMG    = CUDA_DAS_index(smat, gpudata.rfdata);
             % no nvidiaDev.wait() function necessary here; CUDA_DAS_index
             % includes the cuda device synchronization calrfdata      = mxGPUCreateFromMxArray(prhs[1]);ls.
 
-%             nexttile; imagesc(abs(CUDA_IMG)); colormap(pucolors.cvidis);
+            nexttile; imagesc(abs(CUDA_IMG)); colormap(pucolors.cvidis);
             end
 
             %% Run mmult DAS function normally on CPU

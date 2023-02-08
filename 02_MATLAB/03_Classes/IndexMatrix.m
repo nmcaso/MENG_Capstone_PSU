@@ -123,8 +123,14 @@ methods
             if lzar == 0
             allrays = hypot(repmat(xray,lyar,1,1), repmat(yray,1,lxar,1));
             else
-            allrays = sqrt(xray.^2 + yray.^2 + zray.^2); % questionably correct
-            allrays = permute(allrays, [1 2 4 3]);
+            
+            allrays = zeros([size(xray,[1 2]) size(xray,4) size(xray, 3)]);
+            for ii = 1:lx0
+                for jj = 1:lzar
+                    allrays(:,:,jj,ii) = sqrt(xray(:,:,ii, jj).^2 + yray(:,:,ii,jj).^2) + zray(:,:,ii,jj); 
+                end
+                disp(ii);
+            end
             end
 
             switch dataset.pulse_ind

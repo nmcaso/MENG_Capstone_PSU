@@ -36,10 +36,18 @@
 	\usepackage{mathtools}
 	\usepackage{tikz}
 	\usepackage{minted}
-	\usepackage{algorithm}
+	\usepackage[linesnumbered, ruled, vlined, boxed]{algorithm2e}
 	\usepackage{algpseudocode}
 	\usepackage [super,square]{natbib}
 	\usepackage{hyperref}
+	\usepackage[final]{listings}
+	\usepackage[numbered, framed]{matlab-prettifier}
+	\usepackage{xcolor}
+	\usepackage[e]{esvect}
+	\usepackage[
+		style=ieee
+	  ]{biblatex}
+	
 
 %Theorem declaration -----------------------------------
 	\newtheorem{theorem}{Theorem}[section]
@@ -77,12 +85,14 @@
 	\definecolor{gold}{rgb}{1.,0.84,0.}
 	\definecolor{bg}{rgb}{0.95,0.95,0.95}
 
+	\def\code#1{\texttt{#1}}
+
 % fancy chapter titles -----------------------------------
 	\usepackage[Lenny]{fncychap}
 	\ChTitleVar{\Huge\sffamily\bfseries}
 
 % special stuff user input -----------------------------------
-	\input{SupplementaryMaterial/UserDefinedCommands}
+	\addbibresource{Thesis_Bibliography_ncaso.bib}
 
 %Renewed Float Parameters -----------------------------------
 	\renewcommand{\floatpagefraction}{0.85}
@@ -119,7 +129,6 @@
 	Chapter-2/Chapter-2,%
 	Chapter-3/Chapter-3,%
 	Chapter-4/Chapter-4,%
-	Chapter-5/Chapter-5,%
 	Appendix-A/Appendix-A,%
 }
 
@@ -136,6 +145,7 @@
 	\thesistableofcontents
 	\thesislistoffigures
 	\thesislistoftables
+	\listofalgorithms
 	\thesislistofsymbols{SupplementaryMaterial/ListOfSymbols}
 	\thesisacknowledgments{SupplementaryMaterial/Acknowledgments}
 		
@@ -146,18 +156,14 @@
 		\include{Chapter-2/Chapter-2}
 		\include{Chapter-3/Chapter-3}
 		\include{Chapter-4/Chapter-4}
-		\include{Chapter-5/Chapter-5}
 		
 		\appendix		
 		\include{Appendix-A/Appendix-A}
 		%\include{Appendix-B/Appendix-B}
 
 		% Bibliography
-		% \begin{singlespace}
-		% 	\bibliographystyle{FG-bibstyle}
-		% 	\addcontentsline{toc}{chapter}{Bibliography}
-		% 	\bibliography{Biblio-Database}
-		% \end{singlespace}
+		\addcontentsline{toc}{chapter}{Bibliography}
+		\printbibliography
 			
 		\backmatter
 		
