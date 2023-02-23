@@ -6,15 +6,21 @@
 \label{chapter2:das_Overview}
 The simplest example of Delay-and-Sum beamforming is described with a 1-Dimensional array of sensors. Let an incident plane-wave intersect with the sensor array at an angle $\theta$. If every sensor records a time-series signal, the incident wave will appear at different times across the sensor array. To determine the incident angle $\theta$, one only needs two transducers, the distance between them, $L_x$, and the speed of sound $c$. Suppose the time delays from each sensor are $t_1$ and $t_2$:
 
-\begin{center} $\theta = cos^{-1}(\frac{t_2 - t_1}{c L_x})$ \end{center}
+\begin{equation} 
+    \theta = cos^{-1}(\frac{t_2 - t_1}{c L_x})
+\end{equation}
 
 This result can identify the incident angle for a relative time-delay, but what if there are several incident waves? In this case, it is better to compare the spatially constructive signal amplitudes of the signal at several places. This is done by solving the above equation for the relative delay $t_2 - t_1$ for many angles $\theta_i$, and taking the signal amplitude at those delays:
 
-\begin{center} $t_{delay,i} = \frac{L_x}{c} cos(\theta_i)$ \end{center}
+\begin{equation}
+    t_{delay,i} = \frac{L_x}{c} cos(\theta_i)
+\end{equation}
 
 This equation is still in polar coordinates, in terms of $\theta_i$. A cartesian form may also be derived to solve for $t_{delay,i}$ using trigonometry, given a set of points $(x_i,z)$ to calculate the image at, assuming a constant depth $z$:
- 
-\begin{center} $t_{delay,i} = \frac{1}{c} \sqrt{(x_i - x_0)^2 + z^2}$ \end{center}
+
+\begin{equation} 
+    t_{delay,i} = \frac{1}{c} \sqrt{(x_i - x_0)^2 + z^2}
+\end{equation}
 
 The distance between sensor elements is now accounted for in the positions of $x_i$, that is, $\Delta{x} = x_{i+1} - x_i$.
 
@@ -25,22 +31,42 @@ Next, the contribution from one sensor to the final image is calculated by delay
 
 The process above can be organized with a "delay matrix", so as to coalesce data for optimal performance. The Delay-Matrix matrix is n+1-dimensional for an n-dimensional array of sensors, and contains a map of the relative delays between each pixel's location and the sensor arrays' location for each sensor. It uses the distance formula at every point in the list and at every sensor location. For a spatial vector $\vv{r}$ containing the coordinates of the desired imaging locations and a spatial vector $\vv{x}$ containing sensor coordintaes, and for the $k^{th}$ sensor: 
 
-$M_{\vv{r},k}(t) = \frac{1}{c} || \vv{r_k} - \vv{x_k}||_2$
+\begin{equation}
+    M_{\vv{r},k}(t) = \frac{1}{c} || \vv{r_k} - \vv{x_k}||_2
+\end{equation}
 
 Where $||\cdot||$ denotes the $l_2$ norm, or distance formula. To beamform the array of signals in a discrete environment, the time-delays must be translated into delay indices. For a digital system with sampling rate $f_s$, time increment $\Delta{t} = \frac{1}{f_s}$:
 
-$M_{\vv{r},k}(i) = \frac{1}{\Delta{t}} \times M_{\vv{r},k}(t)$
+\begin{equation}
+    M_{\vv{r},k}(i) = \frac{1}{\Delta{t}} \times M_{\vv{r},k}(t)    
+\end{equation}
 
-The delay matrix can be used to efficiently delay the time signals using indexing. The output for an n-dimensional array of sensors is a n+1-dimensional array of beamformed signals that represent the amplitude contributions of each sensor to the virtual locations specified in the list of points, $\vv{r}$
+The delay matrix can be used to efficiently delay the time signals using indexing by coalescing indices to adjacent memory locations when performing calculations. The output for an n-dimensional array of sensors is a n+1-dimensional array of beamformed signals that represent the amplitude contributions of each sensor to the virtual locations specified in the list of points, $\vv{r}$
 
 \section{DAS by Matrix Multiplication}
 \label{chapter2:mmult_das}
 
+Delay and Sum by its nature contains a delaying by indices and subsequent summation, which fits the definition of matrix multiplication if the matrix index positions represent delays. In this formulation, matrix rows represent pixels, and matrix columns represent the indices of the sensors delayed at a pixel's location. The number of rows is equal to the number of samples in a single frame of data multiplied by the number of sensors. We multiply this matrix by a vector of the time data from every sensor in the same order as the sensors are arrayed in the matrix:
+
+\begin{equation}
+    \vv{b}_{i \times j} = M_{i\times j, k}\vv{x}_{k}
+\end{equation}
+
+Where $\vv{b}$ is a vector containing the beamformed image of size $\vv{b} \in \{1 \times n_{pixels}\}$ The image in $x$ and $y$ pixels is formed by reshaping vector $\vv{b}$ by the pixel dimensions to obtain $B_{ij}$. Because we are using the matrix indices to represent time delays for single points in time, the matrix M is $s$-sparse, where $s = n_{pixels}\times n_{sensors}$. Sparse matrix multiplication has many well-documented fast algorithms, and lends itself to very fast DAS computation.
+
 \section{DAS for Large Images}
 \label{chapter2:large_images}
 
+DAS by matrix multiplication and by index matrix are fast and coalesced, but at the cost of memory. Specifically, for both methods, the memory required is $n_{pixels}\times n_{sensors} \times sizeof(datatype)$, where the size of the datatype is 4 bytes for $single$ precision floating point numbers, and 8 for $double$ precision. Increasing the image dimensions eventually creates an index matrix or sparse matrix larger than a computer's available random-access memory (RAM), for which the computer allocates memory to a hard disk drive (HDD) or solid-state drive (SSD). Both processes are slow and disproportinately curtail computation speed.
+
+For the case of large images, faster computation is achieved by generating the index matrix for each sensor, performing delay, and then overwriting the current delay matrix with the next sensor's index matrix. We can do this by calculating the index matrix and overwriting the previous sensor's information, thus removing the need to store data for all sensors:
+
+Another method presented in this project is generating the delay-matrix by translation or rotation. This method shifts the perspective from a stationary 'bird's-eye' view from calculating the index matrix to one where we calculate a delay-matrix once and simply change our frame of reference on that delay matrix for different sensors by translating and rotating the delay matrix as if it were an image. The specifics of this algorithm are introduced in \ref{chapter3:Large_Images}.
+
 \section{Optimizing DAS Code}
 \label{chapter2:optimizing}
+
+
 
 \section{GPU Acceleration}
 \label{chapter2:gpu_accel}

@@ -24,3 +24,9 @@
 *.toc
 *.bst
 *.fdb*
+*.bbl
+*.bcf
+*.blg
+*.loa
+*.xml
+*.json

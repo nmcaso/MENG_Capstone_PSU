@@ -1,4 +1,4 @@
-% PSU Thesis Collector - Nathan Caso, @ 2023
+% PSU Thesis - Nathan Caso, @ 2023
 
 %if you need the instructions, go to Zach's example and look at the instructions again.
 
@@ -44,10 +44,6 @@
 	\usepackage[numbered, framed]{matlab-prettifier}
 	\usepackage{xcolor}
 	\usepackage[e]{esvect}
-	\usepackage[
-		style=ieee
-	  ]{biblatex}
-	
 
 %Theorem declaration -----------------------------------
 	\newtheorem{theorem}{Theorem}[section]
@@ -90,9 +86,6 @@
 % fancy chapter titles -----------------------------------
 	\usepackage[Lenny]{fncychap}
 	\ChTitleVar{\Huge\sffamily\bfseries}
-
-% special stuff user input -----------------------------------
-	\addbibresource{Thesis_Bibliography_ncaso.bib}
 
 %Renewed Float Parameters -----------------------------------
 	\renewcommand{\floatpagefraction}{0.85}
@@ -156,15 +149,18 @@
 		\include{Chapter-2/Chapter-2}
 		\include{Chapter-3/Chapter-3}
 		\include{Chapter-4/Chapter-4}
-		
+
 		\appendix		
 		\include{Appendix-A/Appendix-A}
 		%\include{Appendix-B/Appendix-B}
 
 		% Bibliography
-		\addcontentsline{toc}{chapter}{Bibliography}
-		\printbibliography
-			
+		\begin{singlespace}
+			\addcontentsline{toc}{chapter}{Bibliography}
+			\bibliographystyle{IEEEtran}
+			\bibliography{Thesis_Bibliography_ncaso}
+		\end{singlespace}
+
 		\backmatter
 		
 \end{document}
