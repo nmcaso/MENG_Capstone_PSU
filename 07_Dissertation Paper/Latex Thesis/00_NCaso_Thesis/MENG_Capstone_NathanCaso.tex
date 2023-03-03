@@ -3,164 +3,198 @@
 %if you need the instructions, go to Zach's example and look at the instructions again.
 
 % Document class/type from psuthesis.cls:
-	\documentclass[draft,meng,12pt]{psuthesis}
-	%\documentclass[draft,honorsdepthead,honors]{psuthesis}
-	%\documentclass[draft,honors]{psuthesis}
+\documentclass[meng,12pt]{psuthesis}
+%\documentclass[draft,honorsdepthead,honors]{psuthesis}
+%\documentclass[draft,honors]{psuthesis}
 
 % Declare packages -----------------------------------
-	\usepackage{amsmath}
-	\usepackage{amssymb}
-	\usepackage{amsthm}
-	\usepackage{exscale}
-	\usepackage[mathscr]{eucal}
-	\usepackage{bm}
-	\usepackage{eqlist} % Makes for a nice list of symbols.
-	\usepackage[final]{graphicx}
-	\usepackage[dvipsnames]{color}
-	\DeclareGraphicsExtensions{.eps, .pdf, .png, .jpg}
-	\usepackage[utf8]{inputenc}
-	\usepackage[autostyle]{csquotes}
-	\usepackage{amsfonts}
-	\usepackage[english]{babel}
-	\usepackage[margin=1.0in]{geometry}
-	\usepackage{mathrsfs}
-	\usepackage{ulem}
-	\usepackage{booktabs}
-	\usepackage{subcaption}
-	\usepackage{epstopdf}
-	\usepackage{xcolor}
-	\usepackage{outline}
-	\usepackage{textcomp}
-	\usepackage{xfrac}
-	\usepackage{graphicx}
-	\usepackage{mathtools}
-	\usepackage{tikz}
-	\usepackage{minted}
-	\usepackage[linesnumbered, ruled, vlined, boxed]{algorithm2e}
-	\usepackage{algpseudocode}
-	\usepackage [super,square]{natbib}
-	\usepackage{hyperref}
-	\usepackage[final]{listings}
-	\usepackage[numbered, framed]{matlab-prettifier}
-	\usepackage{xcolor}
-	\usepackage[e]{esvect}
 
-%Theorem declaration -----------------------------------
-	\newtheorem{theorem}{Theorem}[section]
-	\newtheorem{lemma}[theorem]{Lemma}
-	\newtheorem{proposition}[theorem]{Proposition}
-	\newtheorem{corollary}[theorem]{Corollary}
-	\newtheorem{remark}[theorem]{Remark}
+\usepackage{eqlist}
+\usepackage[final]{graphicx}
+\usepackage[english]{babel}
+\usepackage[margin=1.0in]{geometry}
+\usepackage{ulem}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{mathtools}
+\usepackage[linesnumbered, ruled, vlined, boxed]{algorithm2e}
+\usepackage{hyperref}
+\usepackage[final]{listings}
+\usepackage[numbered, framed]{matlab-prettifier}
+\usepackage{xcolor}
+\usepackage[e]{esvect}
+\usepackage{array}
+\usepackage[justification=centering]{caption}
+\usepackage{sectsty}
+\usepackage[t,lf]{spectral} %font
+\usepackage[T1]{fontenc}
+
+
+%my formats!
+\sectionfont{\fontsize{12}{15}\selectfont}
+\newcolumntype{M}[1]{>{\centering\arraybackslash}p{#1}}
+\DeclareGraphicsExtensions{.eps, .pdf, .png, .jpg}
 
 %Environment declarations -----------------------------------
-	\newenvironment{definition}[1][Definition]{\begin{trivlist}
-			\item[\hskip \labelsep {\bfseries #1}]}{\end{trivlist}}
-	\newenvironment{example}[1][Example]{\begin{trivlist}
-			\item[\hskip \labelsep {\bfseries #1}]}{\end{trivlist}}
+\newenvironment{definition}[1][Definition]{\begin{trivlist}
+		\item[\hskip \labelsep {\bfseries #1}]}{\end{trivlist}}
+\newenvironment{example}[1][Example]{\begin{trivlist}
+		\item[\hskip \labelsep {\bfseries #1}]}{\end{trivlist}}
 
 %Command declarations -----------------------------------
-	\newcommand{\vbold}{\bold{v}}
-	\newcommand{\mat}[1]{{\bm{\mathrm{#1}}}}
-	\renewcommand{\vec}[1]{{\bm{\mathrm{#1}}}}
-	\newcommand{\dep}[1]{\hskip-.25em\left(#1\right)}
-	\newcommand{\tdep}{\dep{t}}
-	\newcommand{\omdep}{\dep{\omega}}
-	\newcommand{\fdep}{\dep{f}}
-	\newcommand{\diffd}{\mathrm{d}}
-	\newcommand{\R}{\mathbb{R}}
-	\newcommand{\N}{\mathbb{N}}
-	\newcommand{\Z}{\mathbb{Z}}
-	\newcommand{\dvar}{\zeta}
-	\newcommand{\rvar}{\xi}
-	\newcommand\undermat[2]{
-		\makebox[0pt][l]{$\smash{\underbrace{\phantom{%
-					\begin{matrix}#2\end{matrix}}}_{\text{$#1$}}}$}#2}
-	\renewcommand{\sectionautorefname}{\S}
+\newcommand{\vbold}{\bold{v}}
+\newcommand{\mat}[1]{{\bm{\mathrm{#1}}}}
+\renewcommand{\vec}[1]{{\bm{\mathrm{#1}}}}
+\newcommand{\dep}[1]{\hskip-.25em\left(#1\right)}
+\newcommand{\tdep}{\dep{t}}
+\newcommand{\omg}{\dep{\omega}}
+\newcommand{\fdep}{\dep{f}}
+\newcommand{\diffd}{\mathrm{d}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\dvar}{\zeta}
+\newcommand{\rvar}{\xi}
+\newcommand\undermat[2]{
+	\makebox[0pt][l]{$\smash{\underbrace{\phantom{%
+				\begin{matrix}#2\end{matrix}}}_{\text{$#1$}}}$}#2}
+\renewcommand{\sectionautorefname}{\S}
+
+%Figure plotting commands
+\newcommand{\twofigures}[7]{
+\begin{figure}[h]
+	\begin{minipage}{0.45\linewidth}
+		\centering
+		\includegraphics[scale = #5]{#1}
+		\caption{#2}
+		\label{#6}
+	\end{minipage}
+	\hspace{0.05\linewidth}
+	\begin{minipage}{0.45\linewidth}    
+		\centering
+		\includegraphics[scale = #5]{#3}
+		\caption{#4}
+		\label{#7}
+	\end{minipage}
+\end{figure}
+}
+
+\newcommand{\onefigure}[4]{
+	\begin{figure}[!htb]
+		\centering
+		\includegraphics[scale = #3]{#1}
+		\caption{#2}
+		\label{#4}
+	\end{figure}
+}
+
+%commands for paths!!
+\newcommand{\codepath}{C:/Users/cason/OneDrive/Documents/PSU/Project/02_MATLAB/02_Functions/}
+\newcommand{\classpath}{C:/Users/cason/OneDrive/Documents/PSU/Project/02_MATLAB/03_Classes/}
+\newcommand{\scriptpath}{C:/Users/cason/OneDrive/Documents/PSU/Project/02_MATLAB/}
+\newcommand{\mexpath}{C:/Users/cason/OneDrive/Documents/PSU/Project/03_C++/MEX Functions/}
+
+%Listing style for C/C++
+\lstdefinestyle{C++}{
+	basicstyle=\fontfamily{pcr}\selectfont\footnotesize\color{Sepia},
+	keywordstyle=\color{NavyBlue}\bfseries, 
+	commentstyle = \color{RedViolet}\bfseries,
+	numberstyle=\tiny,
+	backgroundcolor=\color{bluish},
+	showtabs=false,
+	tabsize=2,
+	rulesepcolor=\color{lightgray},
+	morekeywords = {*,+=,=,++,<,>,==},
+	showspaces = false
+}
+
 
 %Color Declarations -----------------------------------
-	\definecolor{gold}{rgb}{1.,0.84,0.}
-	\definecolor{bg}{rgb}{0.95,0.95,0.95}
-
-	\def\code#1{\texttt{#1}}
+\definecolor{gold}{rgb}{1.,0.84,0.}
+\definecolor{bg}{rgb}{0.95,0.95,0.95}
+\definecolor{bluish}{rgb}{0.97 0.97 1}
+\def\code#1{\texttt{#1}}
 
 % fancy chapter titles -----------------------------------
-	\usepackage[Lenny]{fncychap}
-	\ChTitleVar{\Huge\sffamily\bfseries}
+\usepackage[Bjarne]{fncychap}
+\ChTitleVar{\Large\bfseries}
 
 %Renewed Float Parameters -----------------------------------
-	\renewcommand{\floatpagefraction}{0.85}
-	\renewcommand{\topfraction}      {0.85}
-	\renewcommand{\bottomfraction}   {0.85}
-	\renewcommand{\textfraction}     {0.15}
+\renewcommand{\floatpagefraction}{0.85}
+\renewcommand{\topfraction}      {0.85}
+\renewcommand{\bottomfraction}   {0.85}
+\renewcommand{\textfraction}     {0.15}
 
 %Front Matter, Title page: -----------------------------------
-	\title{Parallelization of Delay and Sum Algorithm for Photoacoustic Applications}
-	\author{Nathan M. Caso}
-	\dept{Acoustics}
-	\degreedate{May 2023} 
-	\copyrightyear{2023}
-	\documenttype{Capstone Project}
-	\submittedto{The Graduate School}
-	\gradprogram{Graduate Program in Acoustics}
+\title{Parallelization of Delay and Sum Algorithm for Photoacoustic Applications}
+\author{Nathan M. Caso}
+\dept{Acoustics}
+\degreedate{May 2023} 
+\copyrightyear{2023}
+\documenttype{Capstone Project}
+\submittedto{The Graduate School}
+\gradprogram{Graduate Program in Acoustics}
 
 % Signatury Page: -----------------------------------
 % declare the number of readers
-	\numberofreaders{1}
+\numberofreaders{1}
 
-	% Declaration of advisors and readers
-	\advisor[Thesis Advisor]
-	{Yun Q. Jing}
-	{Associate Professor of Acoustics}
+% Declaration of advisors and readers
+\advisor[Thesis Advisor]
+{Yun Q. Jing}
+{Associate Professor of Acoustics}
 
-	\readerone[]
-	{Victor W. Sparrow}
-	{Professor of Acoustics\\[-1mm] Director, Graduate Program in Acoustics}
+\readerone[]
+{Victor W. Sparrow}
+{Professor of Acoustics\\[-1mm] Director, Graduate Program in Acoustics}
 
 % declaration for included chapters: ----------------
 \includeonly{
-	Chapter-1/Chapter-1,%
-	Chapter-2/Chapter-2,%
-	Chapter-3/Chapter-3,%
-	Chapter-4/Chapter-4,%
-	Appendix-A/Appendix-A,%
+Chapter-1/Chapter-1,
+Chapter-2/Chapter-2,
+Chapter-3/Chapter-3,
+Chapter-4/Chapter-4,
+Appendix-A/Appendix-A,
+Appendix-B/Appendix-B,
+Appendix-C/Appendix-C
 }
 
 %The document itself, finally -----------------------------------
 \begin{document}
+
+\frontmatter
+\psutitlepage
+\psusigpage
+\psupermissionpage
+
+\thesisabstract{SupplementaryMaterial/Abstract}
+
+\thesistableofcontents
+\thesislistoffigures
+\thesislistoftables
+\listofalgorithms
+\thesislistofsymbols{SupplementaryMaterial/ListOfSymbols}
+\thesisacknowledgments{SupplementaryMaterial/Acknowledgments}
 	
-	\frontmatter
-	\psutitlepage
-	\psusigpage
-	\psupermissionpage %currently broken
+\thesismainmatter
+\allowdisplaybreaks{
+	% Chapters
+	\include{Chapter-1/Chapter-1}
+	\include{Chapter-2/Chapter-2}
+	\include{Chapter-3/Chapter-3}
+	\include{Chapter-4/Chapter-4}
 
-	\thesisabstract{SupplementaryMaterial/Abstract}
+	\appendix		
+	\include{Appendix-A/Appendix-A}
+	\include{Appendix-B/Appendix-B}
+	\include{Appendix-C/Appendix-C}
+
+	% Bibliography
+	\begin{singlespace}
+		\addcontentsline{toc}{chapter}{Bibliography}
+		\bibliographystyle{IEEEtran}
+		\bibliography{Thesis_Bibliography_ncaso}
+	\end{singlespace}
+
+	\backmatter
 	
-	\thesistableofcontents
-	\thesislistoffigures
-	\thesislistoftables
-	\listofalgorithms
-	\thesislistofsymbols{SupplementaryMaterial/ListOfSymbols}
-	\thesisacknowledgments{SupplementaryMaterial/Acknowledgments}
-		
-	\thesismainmatter
-	\allowdisplaybreaks{
-		% Chapters
-		\include{Chapter-1/Chapter-1}
-		\include{Chapter-2/Chapter-2}
-		\include{Chapter-3/Chapter-3}
-		\include{Chapter-4/Chapter-4}
-
-		\appendix		
-		\include{Appendix-A/Appendix-A}
-		%\include{Appendix-B/Appendix-B}
-
-		% Bibliography
-		\begin{singlespace}
-			\addcontentsline{toc}{chapter}{Bibliography}
-			\bibliographystyle{IEEEtran}
-			\bibliography{Thesis_Bibliography_ncaso}
-		\end{singlespace}
-
-		\backmatter
-		
 \end{document}

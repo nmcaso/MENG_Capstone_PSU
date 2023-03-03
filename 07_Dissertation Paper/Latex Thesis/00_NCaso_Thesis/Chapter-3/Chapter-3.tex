@@ -56,7 +56,7 @@
 
     \lstinputlisting[caption = {DAS Index Function}, linerange = {11-36}]{"\codepath DAS_original.m"}
 
-    \twofigures{Results_fig_3.png}{DAS 2D Delay Matrix Performance - Frames per Second}{Results_fig_4.png}{DAS 2D Delay Matrix Performance in Pixels Per Second}{0.7}{fig:orig_das_fps}{fig:orig_das_pps}
+    \twofigures{Results_fig_3.png}{DAS 2D Delay Matrix Performance in Frames per Second}{Results_fig_4.png}{DAS 2D Delay Matrix Performance in Pixels Per Second}{0.7}{fig:orig_das_fps}{fig:orig_das_pps}
 
     As previously mentioned, this method uses a two-dimensional delay matrix, which it recalculates and overwrites for every transducer. Because it calculates $n_{sens}$ delay matrices during the delay and sum itself, performance is moderate with an average of $9.3E3$ pixels per second. Figures \ref{fig:orig_das_fps} and \ref{fig:orig_das_pps} show this. Figures \ref{fig:recon_image_ex1} depicts a sample reconstructed image, and figure \ref{fig:timeseries_ex1} shows a mapped image of the raw signal data, where the x-Axis represents the 512 transducers, and the y-axis represents 2125 discrete time samples with a sample rate of $f_s = 19.23 MHz$.
 
