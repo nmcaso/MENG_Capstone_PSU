@@ -1,4 +1,4 @@
-function img_arr = DAS_mmult(dataset,indexmatrix,imagearea)
+function img_arr = DAS_mmult(dataset,delaymatrix,imagearea)
 %image = DAS_mmult(dataset,indexmatrix,imagearea)
 %
 %Uses matrix multiplication to apply the appropriate time-delay to the
@@ -10,7 +10,7 @@ function img_arr = DAS_mmult(dataset,indexmatrix,imagearea)
 %inputs.
 
 finalsize       = [length(imagearea.x_arr) length(imagearea.y_arr)];        % Get the reshaping dimensions.
-img_arr         = indexmatrix.M*dataset.rfdata(:);                          % Index by sparse matrix multiplication into a flat array
+img_arr         = delaymatrix.M*dataset.rfdata(:);                          % Index by sparse matrix multiplication into a flat array
 img_arr         = reshape(img_arr,finalsize);                               % Reshape the image to a 2D array
 
 end

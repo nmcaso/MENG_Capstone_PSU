@@ -19,7 +19,6 @@ ImageArea::ImageArea(double x_min, double x_max, double y_min, double y_max, dou
     for (int i = 0; i < y_arr_sz; ++i) {
         *(yptr+i) = y_min + intval*i;
     }
-
 }
 
 ImageArea::~ImageArea() {};

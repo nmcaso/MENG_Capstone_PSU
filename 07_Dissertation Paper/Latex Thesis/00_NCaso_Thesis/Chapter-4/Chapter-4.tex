@@ -1,3 +1,10 @@
 \chapter{Discussion and Conclusions}
-\label{chapter4:pdf_reconstruct}
-\graphicspath{{Chapter-4/graphics/}}
+\label{discuss_conclude}
+
+\section{Contributions}
+\label{chapter4:contributions}
+This project presents a MATLAB toolbox of several known methods of Delay and Sum Beamforming on the CPU hardware and several new GPU methods for the field of photoacoustic tomography. The novel frame rotation method has the greatest utility in high-resolution imaging and had the highest pixel throughput, even when performed in MATLAB (that is, not compiled). The matrix multiplication on a GPU has the greatest utility for real-time imaging, followed by a straight CPU implementation for data sets that are too large for limited GPU storage. This package is a portable, fast solution for many commonly available hardwares for any practical image size; a user can choose a near optimum method for their specific analysis hardware.
+
+\section{Areas for Future Exploration}
+\label{chapter4:futurework}
+The limitations of this work (and hence areas for further exploration) include cross-compatibility with non-NVIDIA GPU devices, such as AMD Radeon. One direction for future research is creating a universal package in OpenCL. Another area not explored is CUDA Compiled algorithms for sparse matrix multiplication, such as those in Bell, 2008 \cite{bellEfficientSparseMatrixVector2008}. One could also build a compiled version of the frame rotation method; NVIDIA makes some functions like this available in their Image and Signal Performance Primatives package (NPP) \cite{NVIDIA2DImage}.

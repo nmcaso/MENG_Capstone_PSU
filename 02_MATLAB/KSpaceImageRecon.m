@@ -45,4 +45,3 @@ RFDATA      = fftshift(nufftn(ifftshift(rfpad),omega(:),omega_int(:)));
 KSPCIMG     = real(fftshift(ifftn(ifftshift(RFINT))))*4./leafdata.c;
 KSPCIMG     = KSPCIMG(indicesvec,:);
 toc
-

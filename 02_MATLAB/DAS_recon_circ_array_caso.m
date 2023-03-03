@@ -1,12 +1,10 @@
             %% Setup
             clear; clc; close all;
-            for folder = strtrim(string(ls('*0*'))).'
-                addpath(folder);
-            end
+            for ii = strtrim(string(ls))'; if isfolder(ii); addpath(ii); end; end
 
             % Select the things to run:
-original        = false;
-mex_original    = true;
+c_img           = false;
+mex_original    = false;
 framerotate     = false;
 framerotate_gpu = false;
 ind_mat_vec     = false;
@@ -20,20 +18,23 @@ mmt_gpu_matlab  = false;
 
 compute_averages= false;
 nicerplots      = false;
+frotate_comparison = true;
 
-compile_mex_or  = true;
+compile_mex_or  = false;
 compile_c_mex   = false;
-compile_cuda_mex= false;
+compile_cuda_mex= true;
+
+if nicerplots; ind_c = true; end
+if frotate_comparison, ind_c = true; framerotate_gpu = true; end
 
 switches        = [ind_mat_vec ind_mat_halfvec ind_mat_element ind_c ind_gpu_mat ind_gpu_cuda ...
-                   mmt_matlab mmt_gpu_matlab original mex_original framerotate framerotate_gpu];
+                   mmt_matlab mmt_gpu_matlab c_img mex_original framerotate framerotate_gpu];
 gpu_switches    = [ind_gpu_mat ind_gpu_cuda mmt_gpu_matlab framerotate_gpu];
-no_ind_matrix   = [original mex_original framerotate framerotate_gpu];
+no_ind_matrix   = [c_img mex_original framerotate framerotate_gpu];
 
 numimgs         = sum(switches);
 
             %% Compile MEX function(s) if desired
-
             if compile_c_mex
 folder      = pwd;
 copyfile([folder(1:46) '03_C++\MEX Functions\DAS_Index.c'])
@@ -57,33 +58,32 @@ data        = data.rfcaster('double');
 sensarr     = SensorArray("leaf"); sensarr.x0 = double(sensarr.x0); sensarr.z0 = double(sensarr.z0);
 interpolt   = false;
 
-mdl.xmin    = -0.02;                    mdl.xres    = 0.0001;
+mdl.xmin    = -0.02;                    mdl.xres    = 0.00006;
 mdl.xmax    = -mdl.xmin - mdl.xres;     mdl.ymin    = mdl.xmin;
 mdl.yres    = mdl.xres;                 mdl.ymax    = mdl.xmax;
-mdl.zmin    = -0.01;                    mdl.zres    = 0.001;
-mdl.zmax    = -mdl.zmin - mdl.zres;
+% mdl.zmin    = -0.01;                    mdl.zres    = 0.001;
+% mdl.zmax    = -mdl.zmin - mdl.zres;
 
 squarea     = ImageArea(mdl);
 
             if any(switches(1:8))
-ind_mat     = IndexMatrix(sensarr, squarea, data, "index", interpolt); 
+ind_mat     = DelayMatrix(sensarr, squarea, data, "index", interpolt); 
             disp("Time to make Index Matrix: " + ind_mat.Times.total)
             end
 
             if any(gpu_switches) || compute_averages
 gpudata     = data.gpuDataSet;
-            elseif any(gpu_switches) && any(switches(1:8))
 gind_mat    = ind_mat.Send2GPU;
             end
             if mmt_matlab || compute_averages
-mult_mat    = IndexMatrix(sensarr,squarea,data,"matrix", interpolt); disp("Time to make MMT Matrix: " + mult_mat.Times.total);
+mult_mat    = DelayMatrix(sensarr,squarea,data,"matrix", interpolt); disp("Time to make MMT Matrix: " + mult_mat.Times.total);
             end
             if mmt_gpu_matlab || compute_averages
 gmul_mat    = mult_mat.Send2GPU;
             end
 
             %% Run the original DAS function without optimization
-            if original
+            if c_img
             tic
 MAT_ORIGIN  = DAS_original(data, squarea, sensarr);
             time_orig = toc;
@@ -107,7 +107,7 @@ colormax    = max(abs(MAT_MEX_ORI),[],'all');
             %% Frame rotate on CPU
             if framerotate
             tic
-MAT_ROTATE  = DAS_frame_rotate(data, squarea, sensarr, 8.7, true);
+MAT_ROTATE  = DAS_frame_rotate(data, squarea, sensarr, 9.1, true);
             time_frotate = toc;
             disp("Frame Rotation time: " + time_frotate)
 
@@ -115,8 +115,9 @@ MAT_ROTATE  = DAS_frame_rotate(data, squarea, sensarr, 8.7, true);
             end
             %% Frame rotate on GPU
             if framerotate_gpu
+            gpudata.rfdata = gpuArray(single(gpudata.rfdata));
             tic
-MAT_GPU_ROT = DAS_frame_rotate(gpudata, squarea, sensarr, 0, true);
+MAT_GPU_ROT = DAS_frame_rotate(gpudata, squarea, sensarr, 9.1, false);
             time_gpu_frotate = toc;
             disp("GPU Frame Rotation time: " + time_gpu_frotate)
             colormax = gather(max(abs(MAT_GPU_ROT),[],'all'));
@@ -317,22 +318,96 @@ fprintf("Average processing time CUDA Indexing:         %.6f seconds.\n", avg_cu
             end
             %% Figures
             if nicerplots  
-mx1 = gather(max(abs(MAT_GPU_ROT),[],'all'));
-mx2 = max(MAT_ORIGIN,[],'all');
+            close all
+mx1 = max(abs(C_IMAGE(:)));
 
-interp_rot  = abs(MAT_GPU_ROT/mx1);
-original = abs(MAT_ORIGIN/mx2); %normalize
+c_img = abs(C_IMAGE/mx1); %normalize
 
-a = 3;
-nonintlog = mx1*(log10(1+a*original)./log10(1+a));
-yesintlog = mx2*(log10(1+a*interp_rot)./log10(1+a));
+a = 1;
+nonintlog = (20*log10(1+a*c_img)./log10(1+a));
 
-figure; subplot(1,2,1)
-imagesc(nonintlog); colormap(pucolors.cvidis);
-subtitle("Indexed, not Interpolated")
-daspect([1 1 1])
-subplot(1,2,2)
-imagesc(yesintlog); colormap(pucolors.cvidis);
-subtitle("Rotating Delay Matrix Method, Interpolated")
-daspect([1 1 1])
+fig1    = image_plot(nonintlog, squarea);
+fig2    = dataset_plot(data);
+
+saveas(fig1,"05_DataOut\SampleIMG_" + size(c_img,1) + "x" + size(c_img,2)+".png");
+saveas(fig2,"05_DataOut\Sample_rfplot.png")
             end
+
+            %% Frame Rotation Comparison Figure
+            if frotate_comparison
+            close all
+
+mx1         = max(abs(C_IMAGE(:)));
+c_img       = abs(C_IMAGE./mx1); %normalize
+
+mx2         = max(abs(MAT_GPU_ROT(:)));
+r_img       = abs(MAT_GPU_ROT'./mx2); %normalize
+
+b = 1;
+cimg        = (20*log10(1+b*c_img)./log10(1+b));
+rotimg      = (20*log10(1+b*r_img)./log10(1+b));
+
+img1 = image_plot(rotimg, squarea);
+img2 = image_plot(cimg, squarea);
+img1.Children(2).CLim = [1 20];
+img1.Children(2).Subtitle = [];
+img2.Children(2).CLim = [1 20];
+img2.Children(2).Subtitle = [];
+
+saveas(img1, "05_DataOut\FR_Compare_rotated.png")
+saveas(img2, "05_DataOut\FR_Compare_indexed.png")
+            end
+
+            %% Functions
+
+function plot_out = dataset_plot(data)
+
+    plot_out    = figure;
+    data_dB     = 20*log10(abs(data.rfdata)/1e-6);
+
+    plt         = imagesc(data_dB); colormap(pucolors.viridis);
+    clim        ([50 120]);
+    ax          = plt.Parent;
+    ax          .YDir = 'normal';
+
+    c           = colorbar;
+    c.          Label.String = "Sound Pressure Level (dB re 1 \muPa)";    
+    
+    ax.         YTickLabel = 1e6*(ax.YTick * data.dt);
+
+    xlabel      ("Sensor Number");
+    ylabel      ("Time of Arrival, \mu"+"s (1\times 10^-^6 seconds)");
+    daspect     ([1 3.5 1]);
+
+end
+
+function plot_out = image_plot(img, area, varargin)
+    
+    plot_out    = figure('Position', [100 100 500 500]);
+    plt         = imagesc(img); colormap(pucolors.cmrmap);
+%     clim        ([0.2 2.4]);
+    ax          = plt.Parent;
+    
+    [xsz, ysz]  = size(img);
+    
+    xtvec       = 0:xsz/10:xsz;
+    xtvec       = [1 xtvec(2:end)];
+    ax.XTick    = xtvec;
+    ax.XTickLabel = area.x_arr(round(xtvec))*1E2;
+    
+    ytvec       = 0:ysz/10:ysz;
+    ytvec       = [1 ytvec(2:end)];
+    ax.YTick    = ytvec;
+    ax.YTickLabel = area.y_arr(round(ytvec))*1E2;
+    
+    c           = colorbar;
+    c.          Label.String = "Normalized Image Magnitude (dB re 1 Pa)";
+    
+    xlabel      ("X-position (mm)");
+    ylabel      ("Y-position (mm)");
+    subtitle    (size(img,1) + " by " + size(img,2) + " Pixels (" + numel(img)/1e6 + " MP)");
+    daspect     ([1 1 1]);
+
+
+
+end

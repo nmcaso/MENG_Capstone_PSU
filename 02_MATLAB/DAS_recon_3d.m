@@ -15,7 +15,7 @@ mdl.xmax    = -mdl.xmin - mdl.xres;     mdl.ymin    = mdl.xmin;
 mdl.yres    = mdl.xres;                 mdl.ymax    = mdl.xmax;
 squarea     = ImageArea(mdl);
 
-ind_mat     = IndexMatrix(sensarr, squarea, data, "index", interpolt);
+ind_mat     = DelayMatrix(sensarr, squarea, data, "index", interpolt);
 ind_mat.M   = ind_mat.M - 1;
 
             %% Function

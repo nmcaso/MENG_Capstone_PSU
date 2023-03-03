@@ -37,6 +37,7 @@ __global__ void DAS_Index_GPU(const unsigned int* indmat, const double* rfdata, 
     img3d[xyz] = rfdata[indmat[xyz]];
 }
 
+//May be able to speed this up if we permute it. Take a look at https://github.com/shwina/cuper/blob/master/cuTranspose/transpose3d.cu, dev_transpose_102_in_place
 
 //kernel to take the sum in the coalesced first dimension of the 3D array
 __global__ void DAS_3DSUM(double* matrix_3d, double* matrix_2d) {
@@ -97,7 +98,6 @@ void mexFunction(int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[]) {
     const mwSize        xysz[2]     = {dims_3[0], dims_3[1]};
 
     sizes sz1 = {
-    //define block and thread sizes
    
     //Get the number of x/y/z threads
     dims_3[1],
@@ -119,9 +119,6 @@ void mexFunction(int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[]) {
     if (mxGPUGetClassID(rfdata) != mxDOUBLE_CLASS) {
         mexErrMsgIdAndTxt(errId, "rfdata must have class 'double'");
     } 
-    if(dims_3[2] != 512) {
-        mexErrMsgIdAndTxt(errId, "Incorrect number of sensors detected. The third dimension of the index matrix should be the number of sensors, 512. Contact the developer at caso.nathan@gmail.com if you are trying to use a different number of sensors.");
-    }
 
     // Extract a pointer to the input data on the device.
     const unsigned int*     M_dvc       = (const unsigned int*) (mxGPUGetDataReadOnly(M));
@@ -135,12 +132,11 @@ void mexFunction(int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[]) {
     double*     img2_dvc    = (double*)(mxGPUGetData(img_2d));
 
     //Call the DAS Indexing kernel
-    // DAS_Index_GPU<<<block, threads>>>(M_dvc, rfdata_dvc, img3_dvc, img2_dvc, sz1);
-    DAS_Index_GPU <<<sz1.xysize, 512>>> (M_dvc, rfdata_dvc, img3_dvc);
+    DAS_Index_GPU <<<sz1.xysize, dims_3[2]>>> (M_dvc, rfdata_dvc, img3_dvc);
     cudaDeviceSynchronize();
 
     //Call the flattening kernel
-    DAS_3DSUM <<<sz1.xysize, 256, 256*sizeof(double)>>>(img3_dvc, img2_dvc);
+    DAS_3DSUM <<<sz1.xysize, dims_3[2]/2, dims_3[2]/2*sizeof(double)>>>(img3_dvc, img2_dvc);
     cudaDeviceSynchronize();
     
     //Get the result as a gpuArray

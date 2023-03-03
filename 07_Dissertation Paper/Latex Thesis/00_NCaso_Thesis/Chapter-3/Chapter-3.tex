@@ -1,65 +1,243 @@
 \chapter{Methods and Results}
-\label{chapter3:Methodology}
-\graphicspath{{Chapter-3/graphics/}}
+\label{Methodology}
+\graphicspath{{C:/Users/cason/OneDrive/Documents/PSU/Project/02_MATLAB/05_DataOut/}}
 
-\section{Approach}
+\lstset{language=Matlab, style=Matlab-editor}
+
+\section{Project Approach and Equipment}
 \label{chapter3:approach}
 
-The project generally followed this structure:
-\begin{enumerate}
-    \item Develop intuitive DAS algorithms in MATLAB
-    \item Develop optimized DAS algorithms in MATLAB
-    \item Develop parallelized DAS algorithms in MATLAB
-    \item Develop C/C++ DAS Algorithm
-    \item Develop CUDA C/C++ algorithm
-    \item Compile MEX functions for both the C/C++ and CUDA algorithms
-    \item Develop algorithm for large imaging regions
-\end{enumerate}
+    The structure for chapter \ref{Methodology} follows the standard coding practice of working from simple to more complex:
+    \begin{enumerate}
+        \item Develop intuitive DAS algorithms in MATLAB
+        \item Develop optimized DAS algorithms in MATLAB
+        \item Develop parallelized DAS algorithms in MATLAB
+        \item Develop C/C++ DAS Algorithm
+        \item Develop CUDA C/C++ algorithm
+        \item Compile MEX functions for both the C/C++ and CUDA algorithms
+        \item Develop algorithm for large imaging regions
+    \end{enumerate}
+
+    For consistency in comparisons, this paper measures speed in pixels per second to demonstrate computational efficiently and in frames per second to demonstrate imaging utility, unless otherwise noted. The CPU used to perform calculations was a 12th Generation Intel Core i9-12900HK with 14 cores on a Dell XPS 15 9520 with 32 gB of RAM. The GPU was a CUDA-compatible NVIDIA GeForce RTX 3050 Ti, with 4.29 gB of global memory, 49.15 kB of shared memory, and 20 streaming-multiprocessors supporting 1024 threads per block.
+
+    The data used in this project are provided by the Photoacoustic Imaging Lab, Department of Biomedical Engineering, Duke University, and are used purely in an imaging capacity to draw conclusions about algorithm speed and image resolution. The equipment used to acquire the data is Duke's VPS-PAT system adapted from a commercial Verasonics Vantage 256. This hardware \cite{pmgroupVantageSystems2015} has 256 Transmit and 256 Receive transducers. No transmission is necessary for photoacoustic imaging, so the transmit transducers are utilized as receivers; increasing the number of transducers to 512 total. Tang et. al 2023 Chapter 2 \cite{tangHighfidelityDeepFunctional2023a} describes a similar experimental setup to that used to acquire our data.
 
 \section{Algorithms in MATLAB}
 \label{chapter3:matlab_code}
 
-Arguably, the more intuitive algorithms in MATLAB include highly-elemental for-loops. Despite being easy to read, they are notoriously slow due to compile-time overhead. Following good coding practice, this paper will start with the more-intuitive but slower elemental loops, and build towards faster optimization later.
+    MATLAB is a widely used interpreted language for science and engineering \cite{BriefHistoryMATLAB}. Its presence in many large institutions and relatively small learning curve makes it the best analysis option for this project.
 
-The simplest method is to create the delay matrix for one transducer's location, and index this into the time-series signal for that sensor, creating an image from one sensor. Repeat this for every transducer, adding the images together:
+    Arguably, the most intuitive algorithms in MATLAB are highly-elemental loops. Despite being easy to read and track every piece of information, loops are notoriously slow due to compile-time overhead. MATLAB is an interpreted language, so calling a MATLAB function references a compiled routine that is optimized by architecture. Calling one function is generally much faster than calling a function many times in a loop. However, following good coding practice, this paper starts with the more-intuitive but slower elemental loops and performing optimization later.
 
-\begin{algorithm} [H]
-\parindent4em
-\normalem
-\caption{Elemental DAS}\label{algo:elemental_das}
-    \KwIn{range $\overrightarrow{x}$, range $\overrightarrow{y}$, sensor positions $\overrightarrow{x_{0}}, \overrightarrow{x_{0}}$ Signal Matrix $S\in [L_{frame} \times n_{sens}]$}
-    \KwOut{Beamformed Image $B\in[L_x \times L_y]$}
-    $S_{L_f,n_{sens}} \gets$ rfdata\;
-    $Img \gets $zeros\;
-    \For{$k \gets 1$ \KwTo $n_{sens}$}{
-        \For{$i \in \overrightarrow{x} , j \in \overrightarrow{y}$}{
-            $M_{ij} \gets \sqrt{(\overrightarrow{x}_i-x_{0_k})^2 + (\overrightarrow{y}_j-z_{0_k})^2}$\;
-            $M_{ij} \gets M_{ij} \times \frac{1}{c\times dt}$\;
+    The simplest method to perform DAS in MATLAB is to create a 2-dimensional delay matrix for one transducer at every virtual pixel location and index the time series data from that transducer by these delays. This creates a single-transducer image contribution, which can be repeated for the remaining transducers, while adding the individual contributions together:
+    \\
+
+    \begin{algorithm} [H]
+    \parindent4em
+    \normalem
+    \caption{DAS with 2D Delay Matrix}\label{algo:basic_das}
+        \KwIn{Pixel position range $\vv{x}$ and $\vv{y}$ with lengths $L_x, L_y$, transducer positions $\vv{x}_0, \vv{z}_0$, Signal Matrix $\bf{S}\in [L_{frame} \times n_{sens}]$}
+        \KwOut{Beamformed Image $\bf{B}\in[L_x \times L_y]$}
+        $\bf{S}_{L_f,n_{sens}} \gets$ rfdata\;
+        $\bf{B} \gets $zeros\;
+        \For{$k \gets 1$ \KwTo $n_{sens}$}{
+            \For{$i \in \overrightarrow{x} , j \in \overrightarrow{y}$}{
+                $\bf{M}_{ij} \gets \sqrt{(\overrightarrow{x}_i-x_{0_k})^2 + (\overrightarrow{y}_j-z_{0_k})^2}$\;
+                $\bf{M}_{ij} \gets \bf{M}_{ij} \times \frac{1}{c\times \Delta t}$\;
+            }
+            \For{$i \in \overrightarrow{x} , j \in \overrightarrow{y} $} {
+                $\bf{B}_{ij} \gets \bf{B}_{ij} + \bf{S}_{\bf{M}_{ij}k}$\;
+            }
         }
-        \For{$i \in \overrightarrow{x} , j \in \overrightarrow{y} $} {
-            $B_{ij} \gets B_{ij} + S_{M_{ij}k}$\;
-        }
-    }
-    $B \gets \frac{Img}{n_{sens}}$\;
-\end{algorithm}
+        $\bf{B} \gets \frac{\bf{B}}{n_{sens}}$\;
+    \end{algorithm}
 
+    An implementation of this algorithm in MATLAB is:
+
+    \lstinputlisting[caption = {DAS Index Function}, linerange = {11-36}]{"\codepath DAS_original.m"}
+
+    \twofigures{Results_fig_3.png}{DAS 2D Delay Matrix Performance - Frames per Second}{Results_fig_4.png}{DAS 2D Delay Matrix Performance in Pixels Per Second}{0.7}{fig:orig_das_fps}{fig:orig_das_pps}
+
+    As previously mentioned, this method uses a two-dimensional delay matrix, which it recalculates and overwrites for every transducer. Because it calculates $n_{sens}$ delay matrices during the delay and sum itself, performance is moderate with an average of $9.3E3$ pixels per second. Figures \ref{fig:orig_das_fps} and \ref{fig:orig_das_pps} show this. Figures \ref{fig:recon_image_ex1} depicts a sample reconstructed image, and figure \ref{fig:timeseries_ex1} shows a mapped image of the raw signal data, where the x-Axis represents the 512 transducers, and the y-axis represents 2125 discrete time samples with a sample rate of $f_s = 19.23 MHz$.
+
+    \twofigures{SampleIMG_400x400.png}{Reconstructed PAT Image of a Leaf}
+    {Sample_rfplot.png}{Raw Time-Series of Leaf data}{0.5}{fig:recon_image_ex1}{fig:timeseries_ex1}
 
 \section{Optimized Algorithms for MATLAB}
 \label{chapter3:optimized_matlab}
 
-\section{Parallelized Algorithms in MATLAB}
+    To make DAS faster in real-time, one can separate the calculations for the delay matrix from the actual delaying and summation, assuming that the virtual pixel locations do not change between frames of data. This involves storing the delay matrix for every transducer, which is effectively a 3-dimensional delay matrix. The delay matrix is now coalesced and performs faster at the expense of additional storage. The assumption of non-changing pixel locations is valid and even convenient for many applications, such as generating a video of many frames over a constant imaging region. All of the subsequent methods utilize the split delay-matrix formation unless otherwise noted.
+
+    \begin{algorithm} [H]
+        \parindent4em
+        \normalem
+        \caption{Generate 3D Delay Matrix}\label{algo:3d_indmat}
+        \KwIn{Pixel position range $\vv{x}$ and $\vv{y}$ with lengths $L_x, L_y$, transducer positions $\vv{x}_0, \vv{z}_0$, Signal Matrix $\bf{S}\in [L_{frame} \times n_{sens}]$}
+            \KwOut{3D Delay Matrix $\bf{M}\in[n_x \times n_y \times n_{sens}]$}
+            \For{$k \gets 1$ \KwTo $n_{sens}$}{
+                \For{$i \in \vv{x} , j \in \vv{y}$}{
+                    $\bf{M}_{ijk} \gets \sqrt{(\vv{x}_i-x_{0_k})^2 + (\vv{y}_j-z_{0_k})^2}$\;
+                    $\bf{M}_{ijk} \gets \bf{M}_{ijk} \times \frac{1}{c\times \Delta t}$\;
+                }
+            }
+        \end{algorithm}
+
+    Now, the delay and sum function involves fewer calculations:
+
+    \begin{algorithm} [H]
+        \parindent4em
+        \normalem
+        \caption{DAS with 3D Delay Matrix}\label{algo:das_3d_indmat}
+            \KwIn{Delay Matrix $\bf{M}_{ijk} \in[n_x \times n_y \times n_{sens}]$ Signal Matrix $\bf{S}\in [L_{frame} \times n_{sens}]$}
+            \KwOut{Beamformed Image $\bf{B}\in[L_x \times L_y]$}
+            $\bf{S}_{L_f,n_{sens}} \gets$ rfdata\;
+            $\bf{B} \gets $zeros\;
+                \For{$k \gets 1$ \KwTo $n_{sens}$}{
+                    \For{$i \in \vv{x} , j \in \vv{y} $} {
+                        $\bf{B}_{ij} \gets \bf{B}_{ij} + \bf{S}_{\bf{M}_{ijk}k}$\;
+                    }
+            }
+        \end{algorithm}
+
+    The elemental implementation of this in MATLAB is:
+
+    \lstinputlisting[caption = {Elemental DAS Loop Function}]{"\codepath DAS_elementalLoop.m"}
+
+    While the code is readable and intuitive, the performance is too slow to be useful for applications other than single images, with an average of $1.2E3$ pixels per second as seen in figures \ref{fig:elem_das_fps} and \ref{fig:elem_das_pps}. 
+
+    \twofigures{Results_fig_1.png}{Elemental DAS Speed in Frames per Second}{Results_fig_2.png}{Elemental DAS in Pixels Per Second}{0.7}{fig:elem_das_fps}{fig:elem_das_pps}
+
+    To optimize for MATLAB, reduce the function calls by "vectorizing" the code (which will prove useful later for parallel processing, which must be written in vector form).
+
+    \lstinputlisting[caption = {Vectorized DAS Index Function}, linerange = {12 - 12}]{"\codepath DAS_index.m"}
+
+    This single line runs the exact same Delay and Sum calculation as the prior two functions, and yet outperforms both by an order of magnitude, with a mean of $1.9E4$ pixels per second. Figures \ref{fig:all_matlab_fps} and \ref{fig:all_matlab_pps} compare the results.
+
+    \twofigures{Results_fig_5.png}{MATLAB DAS by Delay Matrix FPS Comparison}{Results_fig_6.png}{MATLAB DAS by Delay Matrix PPS Comparison}{0.7}{fig:all_matlab_fps}{fig:all_matlab_pps}
+
+    As mentioned in \ref{chapter2:mmult_das}, one may also perform DAS using a sparse matrix multiplication. MATLAB uses the fast Basic Linear Algebra Subprograms (BLAS) \cite{BLASBasicLinear} \cite{davisAlgorithm1000SuiteSparse2019}, which end up being faster than indexing into a 3D delay-matrix. Building the sparse-matrix version of the delay matrix is similar to building the 3D version, except that the indices of non-zeros in the matrix are now the values of the delay, and the nonzero values are set to 1. The values may also be set as weights for linear interpolation between two indices by placing two weights whose sum is 1 in adjacent rows. The storage requirements are the same as for the 3D Delay Matrix, as the sparsity of the new delay matrix is equal to the number of points in the 3D delay matrix. Matrix multiplication was 3.5 times faster than vectorized indexing, at an average of $7.1E4$ pixels per second. Figures \ref{fig:mmult_das_fps} and \ref{fig:mmult_das_pps} show this speed comparison. The function in MATLAB is now:
+
+    \lstinputlisting[caption = {DAS Matrix Multiplication function}, linerange = {13 - 13}]{"\codepath DAS_mmult.m"}
+
+    The output of the matrix multiplication is a vector of size $L_x \times L_y$ which can be resized to form the image in 2D:
+
+    \lstinputlisting[caption = {Resize Image Vector}, linerange = {12-12, 14-14}]{"\codepath DAS_mmult.m"}
+
+    \twofigures{Results_fig_7.png}{MATLAB DAS by Matrix Multiplication FPS Comparison}{Results_fig_8.png}{MATLAB DAS by Matrix Multiplication PPS Comparison}{0.7}{fig:mmult_das_fps}{fig:mmult_das_pps}
+
+\section{Parallel Algorithms in MATLAB}
 \label{chapter3:parallel_matlab}
+
+    MATLAB's parallel computing toolbox \cite{MATLABGPUComputing} uses CUDA functions on an object class called a "gpuArray" in MATLAB. The toolkit supports both indexing and matrix multiplication. Speedup is maximal when the MATLAB code is in vector format, which we fortunately already did in \ref{chapter3:optimized_matlab}. The remaining steps to perform both methods on the GPU are placing the delay and signal matrices onto the GPU by calling "gpuArray()" and subsequently running the same two functions as performed in \ref{chapter3:optimized_matlab} and \ref{chapter3:matlab_code}:
+
+    \lstinputlisting[caption = {Move data to Device}, linerange = {222-222}]{"\classpath DelayMatrix.m"}
+
+    \twofigures{Results_fig_9.png}{MATLAB GPU FPS Comparisons}{Results_fig_10.png}{MATLAB GPU PPS Comparison}{0.7}{fig:gpu_matlab_fps}{fig:gpu_matlab_pps}
+
+    For both methods, the parallel speedup is tremendous compared to the respective functions performed on the CPU. Indexing on the GPU exceeds the CPU matrix multiplication performance by 60\% and the CPU indexing performance by 6.1 times with an average of $1.2E5$ pixels per second. Matrix multiplication on the GPU, however, exceeds the former by four times, at $4.8E5$ pixels per second, or roughly half of a megapixel per second. This method beamforms a 700 x 700 pixel image at 30 frames per second. If we used only 256 transducers as would be the case for an ultrasound application on the Verasonics hardware, performance increases to 70 FPS, and $0.96$ megapixels per second (see section \ref{chapter3:summary} and Appendices \ref{appA:256_transducerfigs} and \ref{appA:512_transducerfigs} for full speed comparisons).
 
 \section{DAS in C/C++}
 \label{chapter3:compiled_DAS}
 
+    Delay and Sum in a compiled language is comparatively easy, and can remain elemental yet fast. This project used MATLAB's MinGW compiler \cite{MATLABSupportMinGWw64} to build "MEX" functions in C/C++ that can be called in the MATLAB user interface \cite{CallMEXFunctions}. For CPU computation, the project built a function in C that takes 3D delay matrix as input and mimics Algorithm \ref{algo:das_3d_indmat}: 
+    \\
+    \lstinputlisting[linerange = {14-25}, language = C++, style = C++]{"\mexpath DAS_Index.c"}
+
+    This project also compared a compiled version of the 2D delay matrix method from Algorithm \ref{algo:basic_das}, this time using C++ and MATLAB's API classes. The function is several hundred lines long, and is found in Appendix \ref{appC:MEX_cpu}. Compared to their MATLAB function counterparts each is considerably faster, with the DAS by 3D delay matrix clocking in the fastest at $1.4E5$ pixels per second, as seen in figures \ref{fig:compiled_mex_fps} and \ref{fig:compiled_mex_pps}.
+
+    \twofigures{Results_fig_11.png}{C++ MEX vs MATLAB functions FPS}{Results_fig_12.png}{C++ MEX vs MATLAB functions PPS}{0.7}{fig:compiled_mex_fps}{fig:compiled_mex_pps}
+
 \section{DAS in CUDA C++}
 \label{chapter3:CUDA_DAS}
 
-\section{DAS MEX functions}
-\label{chapter3:MEX_DAS}
+    Performing the DAS indexing algorithm in CUDA is more complicated. This is the first truly 'vectorized' method, as single instructions go to 'vectors' of GPU cores and streaming multiprocessors that calculate using their indices in a grid of 'threads' and 'blocks' respectively\cite{CUDARefresherCUDA2020}. The 'delay' part is simple and performed on a 1D CUDA kernel on a 3D delay matrix. Translation from an array of data to GPU hardware involves initializing a number of threads and thread blocks, which represent the data array indices. After specifying these, the GPU scheduler handles the rest. This project performed the delay indexing on 512 threads (one for each transducer), and blocks equal to the number of pixels in the image:
+
+    \lstinputlisting[linerange = {29-38, 134-136}, language = C++, style = C++]{"\mexpath gpudasindex.cu"}
+
+    The summation part is more complicated, as simply adding transducer contributions in parallel creates a race condition. We perform the process with an interleaved-addition dimension reduction algorithm \cite{harrisOptimizingParallelReduction}. The general concept is to add adjacent indices several times until there is only 1 number in that dimension. This is fast because it is coalesced (accesses adjacent memory locations only), and it avoids race condition:
+
+    \lstinputlisting[linerange = {19-27, 42-65, 138-140}, language = C++, style = C++]{"\mexpath gpudasindex.cu"}
+
+    The results are worth the complexity, as the performance is $4E5$ pixels per second, which is 3.4 times faster than the GPU indexing performed by MATLAB in \ref{chapter3:parallel_matlab}.
+
+    \twofigures{Results_fig_13.png}{CUDA DAS Speed FPS}{Results_fig_14.png}{CUDA DAS Speed PPS}{0.7}{fig:compiled_cuda_fps}{fig:compiled_cuda_pps}
+
+    In figures \ref{fig:compiled_cuda_fps} and \ref{fig:compiled_cuda_pps}, the CUDA function speed drops to non-parallel speeds above 0.3 megapixels. This is most likely caused by the scheduler running into the maximum grid size for the device.
 
 \section{Algorithms for Large Images}
 \label{chapter3:Large_Images}
+
+    The last method presented in this project is a novel strategy applicable to images whose delay matrix exceeds the RAM or GPU capacity (high resolution imaging). Exceeding the RAM capacity of a computer is typically much slower than otherwise, and indolves memory paging \cite{ResolveOutMemory} \cite{PagingOperatingSystem2016} to temporary storage locations. When storage space is an issue, typically one would revert to the 2D delay matrix which only stores one transducer's delays at a time. However, this version involved recalculating the delay matrix at every transducer location, which is comparatively slow.
+
+    Instead, we take advantage of fast image rotation and translation algorithms on the GPU (such as MATLAB's imrotate() \cite{RotateImageMATLAB} or imtranslate\cite{TranslateImageMATLAB}), and, assuming that the transducer depth does not change, transform a single, larger delay-matrix and use a window of the transformed delay matrix corresponding to the location of the new transducer relative to the pixel positions. The transducer array for this project's equipment is circular, so the transformation is a rotation. If the array were linear or planar, one would use translations instead of rotations.
+
+    \begin{algorithm} [H]
+        \parindent4em
+        \normalem
+        \caption{DAS Delay Rotation}\label{algo:frame_rotate}
+            \KwIn{Pixel position range $\vv{x}$ and $\vv{y}$ with lengths $L_x, L_y$, transducer positions $\vv{x}_0, \vv{z}_0$, Signal Matrix $\bf{S}\in [L_{frame} \times n_{sens}]$}
+            \KwOut{Beamformed Image $\bf{B}\in[L_x \times L_y]$}
+            $\bf{S}_{L_{frame},n_{sens}} \gets$ rfdata\;
+            $\bf{B} \gets $zeros\;
+            $x_{newmax} \gets (max(|\vv{x}|,|\vv{y}|) - x_{center})\times \sqrt{2}$\;
+            $y_{newmax} \gets (max(|\vv{x}|,|\vv{y}|) - y_{center})\times \sqrt{2}$\;
+            $\vv{x}_{exp} \gets interpolate(|\vv{x}| \to x_{newmax})$\;
+            $\vv{y}_{exp} \gets interpolate(|\vv{y}| \to y_{newmax})$\;
+            $\vv{x}_{window} \gets \vv{x} \cap \vv{x}_{exp}$\;
+            $\vv{y}_{window} \gets \vv{y} \cap \vv{y}_{exp}$\;
+            \For{$i \in \vv{x}_{exp} , j \in \vv{y}_{exp}$}{
+                    $\bf{M}_{ij} \gets \sqrt{(\vv{x}_{exp,i}-x_{0_1})^2 + (\vv{y}_{exp,j}-z_{0_1})^2}$\;
+                    $\bf{M}_{ij} \gets \bf{M}_{ij} \times \frac{1}{c\times \Delta t}$\;
+            }
+
+            \For{$k \gets 1$ \KwTo $n_{sens}$}{
+                $\vv{\theta}_k \gets tan^{-1}{\frac{z_{0,k}}{x_{0,k}}}$\;
+                $M_{ij,k} \gets image\_rotate(\bf{M}_{ij}, \vv{\theta}_k)$\;
+                \For{$i \in \vv{x}_{window} , j \in \vv{y}_{window} $}{
+                    $\bf{M}_{ij} \gets \bf{B}_{ij} + \bf{S}_{\bf{M}_{ij}k}$\;
+                }
+            }
+            $\bf{B} \gets \frac{\bf{B}}{n_{sens}}$\;
+    \end{algorithm}
+
+    The MATLAB implementation from this project is in Appendix \ref{appB:matlab_functions}.
+
+    Frame rotation on the GPU elicited the highest throughput in pixels per second of all methods tested yet, with a maximum of $1$ megapixel per second for a 16 megapixel image (4,000 x 4000), and an average of $6.6E5$ pixels per second, on a 512 transducer data set. However, the speed for large images does not translate to real-time imaging, as seen in figure \ref{fig:fr_rot_sec}.
+
+    \twofigures{Results_fig_15.png}{Frame Rotation Time to Complete}{Results_fig_16.png}{Frame Rotation Speed PPS}{0.7}{fig:fr_rot_sec}{fig:fr_rot_pps}
+
+    The inconsistent slope in the GPU frame rotation speed in the last data point of figure \ref{fig:fr_rot_sec} is caused by the expanded delay matrix exceeding the available space on the GPU, resulting in the kernel adding an extra loop to account for the over-capacity data. See figures \ref{fig:gpu_util} and \ref{fig:gpu_util_v_size}:
+
+    \twofigures{Results_fig_17.png}{GPU Frame Rotation Device Utilization}{Results_fig_18.png}{GPU Frame Rotation Device Utilization vs Imaging Speed}{0.6}{fig:gpu_util}{fig:gpu_util_v_size}
+
+    The rotation method does not account for small radial deviations in distance for the sensors as normal DAS would. It is therefore an approximate method, that may have slightly different results before tuning, as seen by comparing figures \ref{fig:indexed_forcompare} and \ref{fig:rot_forcompare}
+
+    \twofigures{FR_Compare_indexed.png}{Standard DAS Image}{FR_Compare_rotated.png}{Frame-Rotated Image}{0.5}{fig:indexed_forcompare}{fig:rot_forcompare}
+
+
+\section{Results Summary}
+\label{chapter3:summary}
+
+Table 3.1 summarizes the speeds for all methods (excluding frame rotation) for both 512 and 256 transducers. Appendix \ref{app:supp_plots} Figures \ref{fig:all_results_FPS_256} and \ref{fig:all_results_PPS_256} show plots of the imaging speed versus size for every method in a single plot.
+
+\begin{table}[!ht]
+    \caption{Speed Comparisons in Megapixels per Second}
+    \centering
+    \begin{tabular}{|p{2in}|M{1.8in}|M{1.8in}|}
+        \hline
+        Method & 512 Transducers Average Speed (MP per second) & 256 Transducers Average Speed (MP per second) \\ \hline
+        DAS Elemental 3D Delay Matrix & 0.001 & 0.002 \\ \hline
+        DAS 2D Delay Matrix & 0.009 & 0.014 \\ \hline
+        DAS 2D Delay Matrix compiled in C++ & 0.014 & 0.022 \\ \hline
+        DAS Index Vectorized & 0.019 & 0.03 \\ \hline
+        DAS by Matrix Multiplication & 0.071 & 0.113 \\ \hline
+        DAS Delay Matrix on GPU & 0.117 & 0.218 \\ \hline
+        DAS Index compiled in C & 0.135 & 0.222 \\ \hline
+        DAS Delay Matrix with CUDA & 0.223 & 0.74 \\ \hline
+        DAS by Matrix Multiplication on GPU & 0.449 & 0.812 \\ \hline
+    \end{tabular}
+\end{table}
+
+The fastest overall method for real-time applications is the matrix multiplication method on a GPU, followed by CUDA-compiled indexing on a GPU, and CPU compiled indexing. These methods provide generous utility for real-time applications on commonly available, non-specialized hardware; all of them can beamform a 500 x 500 (0.25 megapixel) image above 18 FPS, which exceeds the 15 Hz rule of thumb for minimum psychological frame-rate processing\cite{chenReviewLowFrame2007}.
 
 \newpage

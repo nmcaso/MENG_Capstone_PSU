@@ -1,0 +1,24 @@
+\Appendix{Supplementary C/C++ Code}
+This project built 789 lines of C/C++ and 269 lines of CUDA (1058 lines total). This aptly named appendix comtains all of this.
+
+\label{app:c_cpp_code}
+\lstset{language=C++, style=C++}
+
+\section{MEX Functions for the CPU}
+\label{appC:MEX_cpu}
+\lstinputlisting[caption={Elemental DAS Index in C}]{"\mexpath DAS_Index.c"}
+\lstinputlisting[caption={2D Delay Matrix Indexing in C++}]{"\mexpath DAS_Index_Original.cpp"}
+
+\section{MEX Functions with CUDA for the GPU}
+\label{appC:MEX_CUDA}
+\lstinputlisting[caption={DAS Index in CUDA}]{"\mexpath gpudasindex.cu"}
+
+\newcommand{\originalcpath}{C:/Users/cason/OneDrive/Documents/PSU/Project/03_C++/}
+
+\section{Experimental C++ Code for Standalone Application}
+\label{appC:Standalone_CPP}
+\lstinputlisting[caption={Main / Wrapper in C++}]{"\originalcpath ConstructDAS.cpp"}
+\lstinputlisting[caption={Class for Index Matrix and DAS indexing method}]{"\originalcpath DAS.cpp"}
+\lstinputlisting[caption={Image Area class}]{"\originalcpath ImageArea.cpp"}
+\lstinputlisting[caption={Dataset and Sensor Array class}]{"\originalcpath dataset.cpp"}
+\lstinputlisting[caption={CUDA function and wrapper}]{"\originalcpath CUDADAS.cu"}

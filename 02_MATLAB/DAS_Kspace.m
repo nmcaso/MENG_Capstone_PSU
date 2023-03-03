@@ -20,4 +20,3 @@ imagesc(20*log10(abs(s_tk))); colormap('pucolors.cvidis'); daspect([1 1 1]); nex
 imagesc(20*log10(abs(s_omgx))); colormap('pucolors.cvidis'); daspect([1 1 1]); nexttile;
 imagesc(20*log10(abs(s_omgk))); colormap('pucolors.cvidis'); daspect([1 1 1]); nexttile;
 imagesc(s_tx); colormap(pucolors.cvidis); daspect([1 1 1]);
-

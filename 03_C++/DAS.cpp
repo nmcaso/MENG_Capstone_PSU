@@ -96,7 +96,6 @@ COOMatrix::COOMatrix(ImageArea area1, SensorArray array1, Dataset data1) {
         for(int i = 0; i < xysize; ++i) {
             *(M_C+i+num*xysize) = round(sqrt(*(vec3ptr+i))*1/data1.c*1/data1.dt)+num*data1.rfdata_rows-1;
         }
-
     }
 
     //values = 1 for every Row and Col option
@@ -105,7 +104,7 @@ COOMatrix::COOMatrix(ImageArea area1, SensorArray array1, Dataset data1) {
         *(M_V+i) = 1;
     }
 
-     //put everything together into 1 long vector
+    //put everything together into 1 long vector
     M_RCV               = new int[M_numel*2];
     for(int i = 0; i < M_numel; ++i){
         *(M_RCV + 2*i+0) = *(M_R+i);
@@ -135,26 +134,25 @@ void DAS::DAS_Index(Dataset data2, ImageArea area1, IndexMatrix indmat, SensorAr
     }
 }
 
-void DAS::DAS_COO_SPMULT(Dataset data1, ImageArea area1, COOMatrix mmat, SensorArray sensarr, bool vals_all_one) {
+// Incomplete work as of the end of this project: 
+// void DAS::DAS_COO_SPMULT(Dataset data1, ImageArea area1, COOMatrix mmat, SensorArray sensarr, bool vals_all_one) {
 
-    //preallocate
-    xysize              = area1.y_arr_sz*area1.x_arr_sz;
-    recon_array         = new double [xysize]();
+//     //preallocate
+//     xysize              = area1.y_arr_sz*area1.x_arr_sz;
+//     recon_array         = new double [xysize]();
 
-    //memory index
-    for (int i = 0; i < mmat.M_numel; ++i) {
-            *(recon_array+*(mmat.M_RCV+2*i)) += *(data1.rfptr + *(mmat.M_RCV + 2*i+1)); 
-        }
+//     //memory index
+//     for (int i = 0; i < mmat.M_numel; ++i) {
+//             *(recon_array+*(mmat.M_RCV+2*i)) += *(data1.rfptr + *(mmat.M_RCV + 2*i+1)); 
+//         }
 
-}
+// }
 
-void DAS::DAS_ELL_SPMULT(Dataset data1, ImageArea area1, ELLMatrix mmat, SensorArray sensarr, bool vals_all_one) {
+// void DAS::DAS_ELL_SPMULT(Dataset data1, ImageArea area1, ELLMatrix mmat, SensorArray sensarr, bool vals_all_one) {
 
-    //preallocate
-    xysize              = area1.y_arr_sz*area1.x_arr_sz;
-    recon_array         = new double[xysize]();
+//     //preallocate
+//     xysize              = area1.y_arr_sz*area1.x_arr_sz;
+//     recon_array         = new double[xysize]();
 
-    // mmat.M
-
-
-}
+//     // mmat.M
+// }

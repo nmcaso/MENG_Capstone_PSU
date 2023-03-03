@@ -76,5 +76,4 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
     // Run the DAS function
     dasindex(M, rfdata, img, var_sz);
-
 }

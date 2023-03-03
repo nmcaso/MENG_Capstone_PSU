@@ -3,12 +3,10 @@
 using namespace std;
 
 int main() {
-    //set input path and number of averages.
-    const char* winpath = "C:/Users/cason/OneDrive/Documents/PSU/Project/03_C++/LeafData";
-    // const char* linpath = "/mnt/c/Users/cason/OneDrive/Documents/PSU/Project/03_C++/LeafData/leaf.mat";
-    int                 num_avgs = 1;
 
-    const char* usepath = winpath;
+    //set input path and number of averages for performance checking
+    int num_avgs = 1;
+    const char* usepath = "C:/Users/cason/OneDrive/Documents/PSU/Project/03_C++/LeafData";
 
     //Initialize the classes ---------------------------------------------------------------------------------
     auto start          = std::chrono::high_resolution_clock::now();
@@ -26,7 +24,6 @@ int main() {
 
     //DAS by index matrix method -----------------------------------------------------------------------------
     auto start2         = std::chrono::high_resolution_clock::now();
-    //cout << "Enter number of DAS iterations: "; cin >> num_avgs; cout << "Calculating..." << endl;
     
     for(int i = 0; i < num_avgs; i++) {
         indmatdas.DAS_Index(leafdata,leafarea,indexer,array1);
@@ -35,20 +32,8 @@ int main() {
     auto duration2      = std::chrono::duration_cast<std::chrono::microseconds>(end2 - start2);
     cout                << "Average CPU C++ Computing time for 3D INDEX is: " << static_cast<float>(duration2.count())/static_cast<float>(num_avgs) << " ms" << endl;
 
-    //DAS by Sparse Matrix Multiplication ---------------------------------------------------------------------
-    auto start3         = std::chrono::high_resolution_clock::now();
-    cout << "Enter number of DAS iterations: "; cin >> num_avgs; cout << "Calculating..." << endl;
-    
-    for(int i = 0; i < num_avgs; i++) {
-        sparsemmdas.DAS_COO_SPMULT(leafdata,leafarea,coo_sparse_mat,array1,true);
-    }
-    auto end3           = std::chrono::high_resolution_clock::now();
-    auto duration3      = std::chrono::duration_cast<std::chrono::microseconds>(end3 - start3);
-    cout                << "Average CPU C++ Computing time for MMULT is: " << static_cast<float>(duration3.count())/static_cast<float>(num_avgs) << " ms" << endl;
-
     //DAS Index on GPU! ---------------------------------------------------------------------------------------
     cout                << "Calculating on GPU...";
-    // double* reconarray2 = new double [indexer.M_cols*indexer.M_rows]();
     double* reconarray2 = new double [indexer.M_numel] (); //use this if your're outputting the index matrix from the GPU
     indexgpuwrapper     (leafdata, indexer, reconarray2);
 
@@ -74,6 +59,4 @@ int main() {
     ind_cpu_out.close   ();
     ind_gpu_out.close   ();
     spm_cpu_out.close   ();
-
 }
-
