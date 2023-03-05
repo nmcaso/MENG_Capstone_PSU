@@ -17,7 +17,7 @@
 \usepackage[dvipsnames]{xcolor}
 \usepackage{mathtools}
 \usepackage[linesnumbered, ruled, vlined, boxed]{algorithm2e}
-\usepackage{hyperref}
+\usepackage[hidelinks]{hyperref}
 \usepackage[final]{listings}
 \usepackage[numbered, framed]{matlab-prettifier}
 \usepackage{xcolor}
@@ -27,12 +27,20 @@
 \usepackage{sectsty}
 \usepackage[t,lf]{spectral} %font
 \usepackage[T1]{fontenc}
-
+\usepackage{subfig}
+\usepackage[none]{hyphenat} %no more anal-ysis
 
 %my formats!
 \sectionfont{\fontsize{12}{15}\selectfont}
 \newcolumntype{M}[1]{>{\centering\arraybackslash}p{#1}}
-\DeclareGraphicsExtensions{.eps, .pdf, .png, .jpg}
+\DeclareGraphicsExtensions{.png}
+
+\hypersetup{
+    colorlinks,
+    linkcolor={MidnightBlue},
+    citecolor={SkyBlue},
+    urlcolor={Blue}
+}
 
 %Environment declarations -----------------------------------
 \newenvironment{definition}[1][Definition]{\begin{trivlist}
@@ -60,21 +68,13 @@
 \renewcommand{\sectionautorefname}{\S}
 
 %Figure plotting commands
-\newcommand{\twofigures}[7]{
-\begin{figure}[h]
-	\begin{minipage}{0.45\linewidth}
-		\centering
-		\includegraphics[scale = #5]{#1}
-		\caption{#2}
-		\label{#6}
-	\end{minipage}
-	\hspace{0.05\linewidth}
-	\begin{minipage}{0.45\linewidth}    
-		\centering
-		\includegraphics[scale = #5]{#3}
-		\caption{#4}
-		\label{#7}
-	\end{minipage}
+\newcommand{\twofigures}[9]{
+\begin{figure}[h] 
+	\centering
+	\subfloat[][#2]{\includegraphics[scale = #5]{#1} \label{#6}}
+	\subfloat[][#4]{\includegraphics[scale = #5]{#3} \label{#7}}
+	\caption{#8}
+	\label{#9}
 \end{figure}
 }
 
@@ -144,7 +144,7 @@
 {Associate Professor of Acoustics}
 
 \readerone[]
-{Victor W. Sparrow}
+{Andrew R. Barnard}
 {Professor of Acoustics\\[-1mm] Director, Graduate Program in Acoustics}
 
 % declaration for included chapters: ----------------
