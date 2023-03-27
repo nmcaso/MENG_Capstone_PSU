@@ -107,7 +107,24 @@ figs(22)    = plot_pps(results, [results256.label]);
             %% Save the results
 fno = 1;
 for ii = figs
-    saveas(ii, "05_DataOut\Results_fig_" + fno,'png');
+    fig_name = "05_DataOut\Results_fig_" + fno + ".png";
+    saveas(ii, fig_name);
+    
+    if fno < 19
+    rect8ngle = [0 0 625 586];
+img = imread(fig_name);
+img = imcrop(img,rect8ngle);
+imwrite(img, fig_name);
+    end
+
+    if fno >= 19
+    rect8ngle = [0 40 1250 600];
+img = imread(fig_name);
+img = imcrop(img, rect8ngle);
+imwrite(img, fig_name);
+    end
+
+
     fno = fno + 1;
 end
 

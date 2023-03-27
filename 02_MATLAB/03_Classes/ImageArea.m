@@ -5,8 +5,17 @@ properties
     x_arr       % the x positions
     y_arr       % the y positions
     z_arr       % (optional) depth positions
+    resolution  % dx and dy respectively
 end
 
+properties (Dependent)
+    nPixels
+    image_size
+    image_width
+    image_height
+end
+
+%constructor
 methods
 
     function obj = ImageArea(xmax, xmin, xres, ymax, ymin, yres, zmax, zmin, zres)
@@ -29,6 +38,7 @@ methods
 
                 obj.x_arr = double(model.xmin:model.xres:model.xmax).';
                 obj.y_arr = double(model.ymin:model.yres:model.ymax).';
+                obj.resolution = [model.xres model.yres];
                 
                 if length(input_fields) == 9
                     obj.z_arr = double(model.zmin:model.zres:model.zmax).';
@@ -39,11 +49,34 @@ methods
                 obj.x_arr = double(xmin:xres:xmax).';
                 obj.y_arr = double(ymin:yres:ymax).';
                 obj.z_arr = [];
+                obj.resolution = [xres yres];
             case 9 % if there is an imaging depth input
                 obj.z_arr = double(zmin:zres:zmax).';
+                obj.resolution = [xres yres];
             otherwise
             error("Bad number of input arguments");
         end
     end
 end
+
+%get methods
+methods
+
+    function npix = get.nPixels(obj)
+        npix = length(obj.x_arr)*length(obj.y_arr);
+    end
+
+    function imsz = get.image_size(obj)
+        imsz = [length(obj.x_arr) length(obj.y_arr)];
+    end
+
+    function imsz = get.image_width(obj)
+        imsz = abs(obj.x_arr(end) - obj.x_arr(1))./obj.resolution(1);
+    end
+
+    function imsz = get.image_height(obj)
+        imsz = abs(obj.y_arr(end) - obj.y_arr(1))./obj.resolution(2);
+    end
+end
+
 end

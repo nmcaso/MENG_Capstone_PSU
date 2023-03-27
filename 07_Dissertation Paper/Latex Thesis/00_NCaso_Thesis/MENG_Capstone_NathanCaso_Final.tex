@@ -2,19 +2,20 @@
 
 % Document class/type from psuthesis.cls:
 \documentclass[meng,12pt]{psuthesis}
+%\documentclass[draft,honorsdepthead,honors]{psuthesis}
+%\documentclass[draft,honors]{psuthesis}
 
 % Declare packages -----------------------------------
+
 \usepackage{eqlist}
 \usepackage[final]{graphicx}
 \usepackage[english]{babel}
-\usepackage[bindingoffset = 0.75in,
-			margin= 0.75in,
-			right = 1in]{geometry}
+\usepackage[margin=0.75in]{geometry}
 \usepackage{ulem}
 \usepackage[dvipsnames]{xcolor}
 \usepackage{mathtools}
 \usepackage[linesnumbered, ruled, vlined, boxed]{algorithm2e}
-\usepackage[breaklinks]{hyperref}
+\usepackage[hidelinks]{hyperref}
 \usepackage[final]{listings}
 \usepackage[numbered, framed]{matlab-prettifier}
 \usepackage{xcolor}
@@ -26,14 +27,8 @@
 \usepackage[T1]{fontenc}
 \usepackage{subfig}
 \usepackage{fancyhdr}
-\usepackage{titlesec}
-\usepackage{xurl}
-\usepackage{indentfirst}
-\usepackage[all]{nowidow}
-\usepackage{setspace}
 
 %my formats!
-
 \sectionfont{\fontsize{12}{15}\selectfont}
 \newcolumntype{M}[1]{>{\centering\arraybackslash}p{#1}}
 \DeclareGraphicsExtensions{.png}
@@ -45,12 +40,13 @@
     \fancyhf{}%
     \fancyfoot[R]{\thepage}%
 }
-\setstretch{1.24}
 
-\titleformat{\chapter}[display]{\normalfont\Large\bfseries\centering}{\centering\chaptertitlename\ \thechapter}{12pt}{\Large}
-\titlespacing*{\chapter}{0pt}{-24pt}{24pt}
+%get rid of obnoxious hyphenation.
+\tolerance = 1
+\emergencystretch = \maxdimen
+\hyphenpenalty =  10000
+\hbadness = 10000
 
-% hyperlink colors
 \hypersetup{
     colorlinks,
     linkcolor={black},
@@ -62,7 +58,6 @@
 \newcommand{\twofigures}[9]{
 \begin{figure}[h] 
 	\centering
-	\vspace{-12pt}
 	\subfloat[][#2]{\includegraphics[scale = #5]{#1} \label{#6}}
 	\subfloat[][#4]{\includegraphics[scale = #5]{#3} \label{#7}}
 	\caption{#8}
@@ -71,9 +66,8 @@
 }
 
 \newcommand{\onefigure}[4]{
-	\begin{figure}[h]
+	\begin{figure}[!htb]
 		\centering
-		\vspace{-12pt}
 		\includegraphics[scale = #3]{#1}
 		\caption{#2}
 		\label{#4}
@@ -97,6 +91,7 @@
 	morekeywords = {*,+=,=,++,<,>,==},
 	showspaces = false,
 	breaklines = true, 
+	% columns=fullflexible,
 	postbreak=\mbox{\textcolor{black}{$\hookrightarrow$}\space}
 }
 
@@ -107,6 +102,9 @@
 \definecolor{bluish}{rgb}{0.97 0.97 1}
 \def\code#1{\texttt{#1}}
 
+% fancy chapter titles -----------------------------------
+\usepackage[Bjarne]{fncychap}
+\ChTitleVar{\Large\bfseries}
 
 %Renewed Float Parameters -----------------------------------
 \renewcommand{\floatpagefraction}{0.85}
@@ -129,7 +127,7 @@
 \numberofreaders{1}
 
 % Declaration of advisors and readers
-\advisor[Paper Advisor]
+\advisor[Thesis Advisor]
 {Yun Q. Jing}
 {Associate Professor of Acoustics}
 
@@ -157,17 +155,11 @@ Appendix-C/Appendix-C
 
 \thesisabstract{SupplementaryMaterial/Abstract}
 
-\let\origaddvspace\addvspace
- \renewcommand{\addvspace}[1]{}
- \thesistableofcontents
- \thesislistoffigures
- \thesislistoftables
- \listofalgorithms
- \renewcommand{\addvspace}[1]{\origaddvspace{#1}}
-
-\begin{singlespace}
-	\thesislistofsymbols{SupplementaryMaterial/ListOfSymbols}	
-\end{singlespace}
+\thesistableofcontents
+\thesislistoffigures
+\thesislistoftables
+\listofalgorithms
+\thesislistofsymbols{SupplementaryMaterial/ListOfSymbols}
 \thesisacknowledgments{SupplementaryMaterial/Acknowledgments}
 	
 \thesismainmatter
@@ -185,11 +177,12 @@ Appendix-C/Appendix-C
 	\include{Appendix-C/Appendix-C}
 
 	% Bibliography
-	\addcontentsline{toc}{chapter}{Bibliography}
-	\bibliographystyle{IEEEtran}
 	\begin{singlespace}
+		\addcontentsline{toc}{chapter}{Bibliography}
+		\bibliographystyle{IEEEtran}
 		\bibliography{Thesis_Bibliography_ncaso}
 	\end{singlespace}
+
 	\backmatter
 	
 \end{document}

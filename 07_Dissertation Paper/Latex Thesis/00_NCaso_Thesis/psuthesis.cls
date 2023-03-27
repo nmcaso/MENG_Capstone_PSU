@@ -170,11 +170,7 @@
 \LoadClass[openany,oneside]{book}
 \RequirePackage{calc}
 \RequirePackage{setspace}
-% If you are using the subfigure package, load the tocloft package with
-% the subfigure option and comment out the next line.
 \RequirePackage{tocloft}[2003/09/26]
-%\RequirePackage[subfigure]{tocloft}[2003/09/26]
-%\RequirePackage{fancyhdr}
 
 % Define the margins and other spacings.
 \setlength{\oddsidemargin}{0.6in}
@@ -183,12 +179,13 @@
 \setlength{\headsep}{1.8\baselineskip}
 \setlength{\textheight}{8.60in}
 \setlength{\textwidth}{5.8in}
+\setlength{\cftbeforechapskip}{0 pt}
+\setlength{\cftaftertoctitleskip}{24 pt}
 \sloppy
 % Set the baselinestretch using the setspace package.
 % The LaTeX Companion claims that a \baselinestretch of
 % 1.24 gives one-and-a-half line spacing, which is allowed
 % by the PSU thesis office. FC likes 1.28 better. :-)
-\setstretch{1.28}
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%
@@ -212,10 +209,12 @@
 \settowidth{\mylonglength}{\bfseries\mylongname\cftchapaftersnum}% extra space
 }
 {%
-\renewcommand{\cftchappresnum}{Chapter } 
-\renewcommand{\cftchapaftersnumb}{\\ \mbox{}\hspace{-\mylength}\hspace{-0.1em}}
-\settowidth{\mylength}{\bfseries\cftchappresnum\cftchapaftersnum} % extra space 
-\addtolength{\cftchapnumwidth}{\mylength+0.1em} % add the extra space\renewcommand{\cftchapfont}{\bfseries} 
+
+\renewcommand{\cftchappresnum}{Chapter }
+\settowidth{\mylength}{\bfseries\cftchappresnum\cftchapaftersnum}% extra space
+\addtolength{\cftchapnumwidth}{\mylength} % add the extra space
+\newcommand{\mylongname}{Appendix }% the longest chapter number header
+\settowidth{\mylonglength}{\bfseries\mylongname\cftchapaftersnum}% extra space
 }%
 
 
@@ -293,7 +292,7 @@
 {}
 
 \ifthenelse{\boolean{psu@meng}}%
-{\newcommand{\psu@degreetype}{Master of Engineering in Acoustics}}%
+{\newcommand{\psu@degreetype}{Master of Engineering}}%
 {}
 
 \ifthenelse{\boolean{psu@ma}}%
@@ -396,7 +395,19 @@
 % Here is the permission page.
 \newcommand{\psupermissionpage}{%
 \thispagestyle{empty}
+
+\begin{minipage}[c]{\textwidth}
+    \vspace{2.5in}
+    I grant The Pennsylvania State University the nonexclusive right to use this work for the University’s own purposes and to make single copies of the work available to the public on a not-for-profit basis if copies are not otherwise available.
+    \vspace{0.75in}
+\end{minipage}
+
+\hspace{2in} \hrulefill
+
+\vspace{-3pt}
+\hspace{2in} Nathan M. Caso
 \addtocounter{page}{-1}
+\newpage
 }
 
 % Here is the title page.
@@ -407,8 +418,7 @@
 \ifthenelse{\boolean{psu@honors}}
 %%%
 {%
-\vspace*{-0.75in}
-%\enlargethispage{0.5in}
+\vspace*{0in}
 \begin{center}
 THE PENNSYLVANIA STATE UNIVERSITY \\ SCHREYER HONORS COLLEGE
 \end{center}
@@ -472,7 +482,7 @@ Approved: \= \rule{2.75in}{0.5pt} \quad Date: \= \rule{1.5in}{0.5pt} \\[-3pt]
 }%
 %%%
 {%
-\vspace*{-0.75in}
+% \vspace*{-0.75in}
 \begin{center}
     \textbf{The Pennsylvania State University\\
             \psu@submittedto \\
@@ -485,10 +495,10 @@ Approved: \= \rule{2.75in}{0.5pt} \quad Date: \= \rule{1.5in}{0.5pt} \\[-3pt]
 \end{center}
 \vfill
 \begin{center}
-    A \psu@documenttype\ in\\
-    \psu@dept\\
-    by\\
-    \psu@author\\
+    A \psu@documenttype\ in\\ 
+    \psu@dept\\ 
+    by\\ 
+    \psu@author\\ 
 \end{center}
 \vfill
 \begin{center}
@@ -523,11 +533,9 @@ Approved: \= \rule{2.75in}{0.5pt} \quad Date: \= \rule{1.5in}{0.5pt} \\[-3pt]
 \newlength{\psu@sigoptionskip}
 \newlength{\psu@sigafteroptionskip}
 \newlength{\psu@intersigspace}
-% \newlength{\psu@spacebeforedateofsig}
-% \settowidth{\psu@spacebeforedateofsig}{\normalsize Date of Signature}
 \setlength{\psu@sigoptionskip}{-0.04in}
 \newcommand{\psu@signaturepage}{%
-    \footnotesize
+    
     \ifthenelse{\psu@readers = 6}{%
         \setlength{\psu@sigafteroptionskip}{2.65\baselineskip}
         \setlength{\psu@intersigspace}{2.65\baselineskip}
@@ -538,9 +546,9 @@ Approved: \= \rule{2.75in}{0.5pt} \quad Date: \= \rule{1.5in}{0.5pt} \\[-3pt]
     }
     \enlargethispage*{0.5in}
     \thispagestyle{empty}
-    \vspace*{-0.5in}
+    \vspace*{0in}
     \noindent {\normalsize We approve the paper of \psu@author.}\\[0.1in]
-    \mbox{}\hspace{5.10in} {\normalsize Date of Signature}\\[3\baselineskip]
+    \mbox{}\hspace{4.7in} {\normalsize Date of Signature}\\[3\baselineskip]
     \signature\psu@advisor\\[1mm]
          \psu@advisortitle
          \ifthenelse{\equal{\psu@advisoroption}{}}%
@@ -846,35 +854,30 @@ Approved: \= \rule{2.75in}{0.5pt} \quad Date: \= \rule{1.5in}{0.5pt} \\[-3pt]
 \newcommand{\thesisabstract}[1]{%
 \pagestyle{plain}
 \chapter*{Abstract}
-    \begin{singlespace}
         \input{#1}
-    \end{singlespace}
 \newpage
 }
 
 
 \renewcommand{\contentsname}{Table of Contents}
-\setcounter{secnumdepth}{10}
+\setcounter{secnumdepth}{5}
 \setcounter{tocdepth}{4}
 \newcommand{\thesistableofcontents}{%
-\begin{singlespace}
 \if@twocolumn
 \@restonecoltrue\onecolumn
 \else
 \@restonecolfalse
 \fi
-\chapter*{\contentsname
+\chapter*{Table of Contents
 \@mkboth{%
 \MakeUppercase\contentsname}{\MakeUppercase\contentsname}}%
 \@starttoc{toc}%
 \if@restonecol\twocolumn\fi%
-\end{singlespace}
 \clearpage
 }
 
 \renewcommand{\listfigurename}{List of Figures}
 \newcommand{\thesislistoffigures}{%
-\begin{singlespace}
 \if@twocolumn
 \@restonecoltrue\onecolumn
 \else
@@ -885,13 +888,11 @@ Approved: \= \rule{2.75in}{0.5pt} \quad Date: \= \rule{1.5in}{0.5pt} \\[-3pt]
 \MakeUppercase\listfigurename}{\MakeUppercase\listfigurename}}%
 \@starttoc{lof}%
 \if@restonecol\twocolumn\fi
-\end{singlespace}
 \clearpage
 }
 
 \renewcommand{\listtablename}{List of Tables}
 \newcommand{\thesislistoftables}{%
-\begin{singlespace}
 \if@twocolumn
 \@restonecoltrue\onecolumn
 \else
@@ -902,34 +903,26 @@ Approved: \= \rule{2.75in}{0.5pt} \quad Date: \= \rule{1.5in}{0.5pt} \\[-3pt]
 \MakeUppercase\listtablename}{\MakeUppercase\listtablename}}%
 \@starttoc{lot}%
 \if@restonecol\twocolumn\fi
-\end{singlespace}
 \clearpage
 }
 
 
 \newcommand{\thesislistofsymbols}[1]{%
 \chapter{List of Symbols}
-%\addcontentsline{toc}{chapter}{List of Symbols}
-\begin{singlespace}
     \input{#1}
-\end{singlespace}
 }
 
 
 \newcommand{\thesisacknowledgments}[1]{%
 \chapter{Acknowledgments}
 %\addcontentsline{toc}{chapter}{Acknowledgments}
-\begin{singlespace}
     \input{#1}
-\end{singlespace}
 }
 
 
 \newcommand{\thesisdedication}[2]{%
 \chapter*{#2}
-\begin{singlespace}
     \input{#1}
-\end{singlespace}
 }
 
 
@@ -954,9 +947,7 @@ Approved: \= \rule{2.75in}{0.5pt} \quad Date: \= \rule{1.5in}{0.5pt} \\[-3pt]
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \setlength{\textheight}{8.5in}
 \mainmatter
-\pagestyle{empty}
-\renewcommand{\@oddhead}{\mbox{}\hfill\arabic{page}}
-\let\ps@plain = \ps@empty
+\pagestyle{plain}
 }
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

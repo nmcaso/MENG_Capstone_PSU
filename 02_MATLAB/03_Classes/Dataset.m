@@ -9,6 +9,10 @@ properties
     pulse_ind   % pulse index if desired
 end
 
+properties (Dependent)
+    frame_size
+end
+
 methods
     
     function obj = Dataset(filepath,pulse_ind)
@@ -22,6 +26,8 @@ methods
             otherwise
             warning("Error: file path must lead to a valid dataset .mat file")
         end
+
+        if nargin == 1; pulse_ind = 0; end
         
         try %import the variables from the data file
         obj.fs      = fs;
@@ -45,6 +51,15 @@ methods
     function obj = rfcaster(obj,newclass)
     %Change the rfdata data type (in case you need to for sparse mmult)
         obj.rfdata = cast(obj.rfdata,newclass);
+    end
+
+end
+
+%get methods for dependent properties
+methods
+    
+    function frsize = get.frame_size(obj)
+        frsize = size(obj.rfdata,1);
     end
 
 end

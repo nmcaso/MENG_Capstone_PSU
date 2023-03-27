@@ -6,6 +6,11 @@ properties
     z0      % y-coordinates of the transducers (with naming convention of the y axis being depth)
 end
 
+properties (Dependent)
+    nSensors
+    Array
+end
+
 methods
     
     function obj = SensorArray(filepath)
@@ -13,12 +18,10 @@ methods
 
         % Input Checks
         switch class(filepath)
-            case 'string'
-                load(filepath,'z0','x0')
-            case 'char'
-                load(string(filepath),'z0','x0')
+            case {'string' 'char'}
+                load(string(filepath),'z0','x0');
             otherwise
-            warning("Error: file path is not a string that points to a dataset .mat file")
+            error("File path is not a string that points to a dataset .mat file");
         end
 
         % Convert from mm to meters
@@ -42,4 +45,25 @@ methods
         obj.z0  = gpuArray(obj.z0);
     end
 end
+
+%get method for dependent properties
+methods
+    
+    function nsens = get.nSensors(obj)
+        nsens = length(obj.x0);
+    end
+
+    function array = get.Array(obj)
+        
+        array(obj.nSensors,1) = struct;
+        for ii = 1:length(obj.x0)
+            array(ii).x = obj.x0(ii);
+            array(ii).z = obj.z0(ii);
+            array(ii).index = ii;
+        end
+    
+    end
+
+end
+
 end
