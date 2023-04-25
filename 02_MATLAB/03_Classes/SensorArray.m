@@ -25,11 +25,11 @@ methods
         end
 
         % Convert from mm to meters
-        obj.x0  = x0*1e-3;
-        obj.z0  = z0*1e-3;
+        obj.x0  = x0(:).'*1e-3;
+        obj.z0  = z0(:).'*1e-3;
 
         % Correct faulty sensors
-        faulty = abs(diff(obj.x0)) > 8*mean(obj.x0);
+        faulty = abs(diff(obj.x0)) > 8*mean(obj.x0 + 1) - 1;
         if any(faulty)
             %interpolate between the adjacent two sensors if there are
             %faulty sensor positions

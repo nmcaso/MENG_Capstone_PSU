@@ -10,7 +10,7 @@ framerotate_gpu = false;
 ind_mat_vec     = false;
 ind_mat_element = false;
 ind_mat_halfvec = false;
-ind_c           = false;
+ind_c           = true;
 ind_gpu_mat     = false;
 ind_gpu_cuda    = false;
 mmt_matlab      = false;
@@ -18,11 +18,11 @@ mmt_gpu_matlab  = false;
 
 compute_averages= false;
 nicerplots      = false;
-frotate_comparison = true;
+frotate_comparison = false;
 
 compile_mex_or  = false;
 compile_c_mex   = false;
-compile_cuda_mex= true;
+compile_cuda_mex= false;
 
 if nicerplots; ind_c = true; end
 if frotate_comparison, ind_c = true; framerotate_gpu = true; end

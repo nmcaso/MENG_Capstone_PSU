@@ -21,6 +21,7 @@ classdef pucolors
 %   - spectral
 %   - twilight
 %   - warmcool
+%   - kwave
 
     methods (Static)
 
@@ -1986,7 +1987,8 @@ values =  [ 0.2298057	0.298717966	0.753683153;
         %divergent colormap purple to yellow through red.
         % Source: https://www.mathworks.com/matlabcentral/fileexchange/2662-cmrmap-m
 
-            if nargin < 1
+            
+if nargin < 1
                f = get(groot,'CurrentFigure');
                if isempty(f)
                   m = size(get(groot,'DefaultFigureColormap'),1);
@@ -2085,7 +2087,7 @@ values =      [ 0.6980    0.0941    0.1686;
 
        end
 
-       function map = red2black(m)
+        function map = red2black(m)
        %divergent colormap from red to black through white.
        %source https://colorbrewer2.org/#
 
@@ -2197,6 +2199,31 @@ values =  [     0.2471         0    0.4902
 
         end
 
+        function map = kwave(m)
+            
+            if nargin < 1
+               f = get(groot,'CurrentFigure');
+               if isempty(f)
+                  m = size(get(groot,'DefaultFigureColormap'),1);
+               else
+                  m = size(f.Colormap,1);
+               end
+            end
+            
+            neg_pad = round(48 * m / 256);
+
+            % define colour spectrums
+            neg = bone(m / 2 + neg_pad);
+            neg = neg(1 + neg_pad:end, :);
+            pos = flip(hot(m / 2),1);
+            
+            % create custom colour map
+            values = [neg; pos];
+
+            P = size(values,1);
+            map = interp1(1:size(values,1), values, linspace(1,P,m), 'linear');
+
+        end
     end
     
 end

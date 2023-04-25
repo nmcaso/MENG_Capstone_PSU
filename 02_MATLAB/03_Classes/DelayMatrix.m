@@ -148,10 +148,10 @@ methods
             tic
             if lzar == 0
                 phasor1(1,:,:)  = (0:size(dataset.rfdata,2)-1)*(size(dataset.rfdata,1));
-                phasorcol       = repmat(phasor1,lxar,lyar,1);
+                phasorcol       = repmat(phasor1,lyar,lxar,1);
             else
                 phasor1(1,1,:,:)  = (0:size(dataset.rfdata,2)-1)*(size(dataset.rfdata,1));
-                phasorcol       = repmat(phasor1,[lxar,lyar,lzar,1]);
+                phasorcol       = repmat(phasor1,[lyar,lxar,lzar,1]);
             end            
             delay_mat_obj.Times.phasormat = toc;
             
