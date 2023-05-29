@@ -30,3 +30,6 @@
 *.loa
 *.xml
 *.json
+*.mat
+*.avi
+*.fig

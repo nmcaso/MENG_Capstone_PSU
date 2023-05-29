@@ -2,12 +2,11 @@
             clear; clc; close all;
             for pth = strtrim(string(ls))'; if isfolder(pth); addpath(pth); end; end
            
-n_avgs      = 50;
+n_avgs      = 1;
 demo        = false;
 
-compression_ratio_time = 0.7;
+compression_ratio_time = 0.8;
 compression_ratio_space = 0.5;
-pass_high   = false;
 
             %% Demo!
 if demo
@@ -35,7 +34,6 @@ sens        = SensorArray("kwave_out.mat");
 for fld     = ["x0" "z0"]
     sens.(fld) = cast(sens.(fld),"double");
 end
-img         = ImageArea(0.0199, -0.02, 1e-4, 0.0199, -0.02, 1e-4);
 
             %% Do B-Mode FFT Method
 padding_factor = 1;
@@ -77,12 +75,7 @@ radius_x    = round((1-compression_ratio_space)/2 * size(rf_double,2));
 center_x    = floor(size(rf_double,2)/2)+1;
 
 cs_inds     .time(center_t-radius_t:center_t+radius_t-1) = true;
-cs_inds     .space(center_x - radius_x:center_x + radius_x-1) = true;
-
-if pass_high
-        cs_inds     .time = ~cs_inds.time;
-        cs_inds     .space = ~cs_inds.space;
-end
+cs_inds     .space(center_x - radius_x:center_x + radius_x - 1) = true;
 
 k_x_sub     = k_x(cs_inds.time,cs_inds.space);
 omg_0_sub   = omg_0(cs_inds.time,cs_inds.space);
@@ -94,9 +87,10 @@ tic
 for ii = 1:n_avgs 
     RF2         = fftshift(fftn(ifftshift(rf_double), pad1));
     RF2         = RF2(cs_inds.time,cs_inds.space);
-    RF_interp2  = interp2(k_x_sub, omg_0_sub, RF2, k_x_sub, omg_1_sub, "cubic");
-    RF_interp2(isnan(RF_interp2)) = 0;
-    M           (cs_inds.time,cs_inds.space) = RF_interp2;
+    RF_interp2  = interp2(k_x_sub, omg_0_sub, RF2, k_x_sub, omg_1_sub, "linear");
+    
+    RF_interp2  (isnan(RF_interp2)) = 0;
+    M           (cs_inds.time, cs_inds.space) = RF_interp2;
     p_recon2     = real(fftshift(ifftn(ifftshift(M), pad2)));
 end
 time2       = toc;

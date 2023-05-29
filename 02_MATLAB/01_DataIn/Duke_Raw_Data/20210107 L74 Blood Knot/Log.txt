@@ -1,0 +1,8 @@
+P: startDepth and endDepth for data acquisition in terms of wavelength. For PA use, use P(2,:)
+PARcvData: PA Aline lengths x channel number x frame number （80 ns system delay, corresponding to 16.7 data points, so the start point is around 17th data point）
+temperature: water temperature measured during the experiment
+Trans: transducer information
+	frequency: central frequency (unit, MHz)
+	sampling frequency: 4*central frequency, in this case 4*5.208
+	
+	

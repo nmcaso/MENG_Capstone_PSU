@@ -50,16 +50,22 @@ end
 methods
     
     function nsens = get.nSensors(obj)
-        nsens = length(obj.x0);
+        if min(size(obj.z0)) > 1
+            nsens = size(obj.z0);
+        else
+            nsens = length(obj.z0);
+        end
     end
 
     function array = get.Array(obj)
         
-        array(obj.nSensors,1) = struct;
-        for ii = 1:length(obj.x0)
-            array(ii).x = obj.x0(ii);
-            array(ii).z = obj.z0(ii);
-            array(ii).index = ii;
+        array(size(obj.x0)) = struct;
+        for ii = 1:size(obj.x0,1)
+            for jj = 1:size(obj.x0,2)
+                array(ii, jj).x = obj.x0(ii, jj);
+                array(ii, jj).z = obj.z0(ii, jj);
+                array(ii, jj).index = [ii jj];
+            end
         end
     
     end

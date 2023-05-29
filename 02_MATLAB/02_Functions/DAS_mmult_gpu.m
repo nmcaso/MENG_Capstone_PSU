@@ -6,4 +6,6 @@ finalsize       = [length(imagearea.x_arr) length(imagearea.y_arr)];        % Ge
 img_arr         = delaymatrix.M*dataset.rfdata(:);                          % Index by sparse matrix multiplication into a flat array
 img_arr         = reshape(img_arr,finalsize);                               % Reshape the image to a 2D array
 cuda_device.wait();
+
+
 end

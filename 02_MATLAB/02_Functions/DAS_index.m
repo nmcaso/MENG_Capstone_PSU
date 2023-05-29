@@ -6,12 +6,12 @@ function img_arr = DAS_index(dataset,delaymatrix)
 %
 % Use the classes Dataset and IndexMatrix to generate the inputs.
 
-            % this is the most vectorized version of the function on the CPU in MATLAB
-switch delaymatrix.type
-    case "Index2D"
-    img_arr     = sum(dataset.rfdata(delaymatrix.M),3);
-    case "Index3D"
-    img_arr     = sum(dataset.rfdata(delaymatrix.M),4);
-    otherwise
-    error("Wrong DAS function for this type of index matrix!")
+    % this is the most vectorized version of the function on the CPU in MATLAB
+    switch delaymatrix.type
+        case "Index2D"
+        img_arr     = sum(dataset.rfdata(delaymatrix.M),3);
+        otherwise
+        error("Wrong DAS function for this type of index matrix!")
+    end
+
 end
