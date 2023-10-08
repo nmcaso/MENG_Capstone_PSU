@@ -3,18 +3,18 @@
             for ii = strtrim(string(ls))'; if isfolder(ii); addpath(ii); end; end
 
             % Select the things to run:
-c_img           = false;
-mex_original    = false;
-framerotate     = false;
-framerotate_gpu = false;
-ind_mat_vec     = false;
-ind_mat_element = false;
-ind_mat_halfvec = false;
+c_img           = true;
+mex_original    = true;
+framerotate     = true;
+framerotate_gpu = true;
+ind_mat_vec     = true;
+ind_mat_element = true;
+ind_mat_halfvec = true;
 ind_c           = true;
-ind_gpu_mat     = false;
-ind_gpu_cuda    = false;
-mmt_matlab      = false;
-mmt_gpu_matlab  = false;
+ind_gpu_mat     = true;
+ind_gpu_cuda    = true;
+mmt_matlab      = true;
+mmt_gpu_matlab  = true;
 
 compute_averages= false;
 nicerplots      = false;
@@ -58,7 +58,7 @@ data        = data.rfcaster('double');
 sensarr     = SensorArray("leaf"); sensarr.x0 = double(sensarr.x0); sensarr.z0 = double(sensarr.z0);
 interpolt   = false;
 
-mdl.xmin    = -0.02;                    mdl.xres    = 0.00006;
+mdl.xmin    = -0.02;                    mdl.xres    = 0.0001;
 mdl.xmax    = -mdl.xmin - mdl.xres;     mdl.ymin    = mdl.xmin;
 mdl.yres    = mdl.xres;                 mdl.ymax    = mdl.xmax;
 % mdl.zmin    = -0.01;                    mdl.zres    = 0.001;
@@ -68,18 +68,18 @@ squarea     = ImageArea(mdl);
 
             if any(switches(1:8))
 ind_mat     = DelayMatrix(sensarr, squarea, data, "index", interpolt); 
-            disp("Time to make Index Matrix: " + ind_mat.Times.total)
+            disp("Time to make Index Matrix: " + ind_mat.Time)
             end
 
             if any(gpu_switches) || compute_averages
 gpudata     = data.gpuDataSet;
-gind_mat    = ind_mat.Send2GPU;
+gind_mat    = ind_mat.M_gpu;
             end
             if mmt_matlab || compute_averages
-mult_mat    = DelayMatrix(sensarr,squarea,data,"matrix", interpolt); disp("Time to make MMT Matrix: " + mult_mat.Times.total);
+mult_mat    = DelayMatrix(sensarr,squarea,data,"matrix", interpolt); disp("Time to make MMT Matrix: " + mult_mat.Time);
             end
             if mmt_gpu_matlab || compute_averages
-gmul_mat    = mult_mat.Send2GPU;
+gmul_mat    = mult_mat.M_gpu;
             end
 
             %% Run the original DAS function without optimization
@@ -121,6 +121,7 @@ MAT_GPU_ROT = DAS_frame_rotate(gpudata, squarea, sensarr, 9.1, false);
             time_gpu_frotate = toc;
             disp("GPU Frame Rotation time: " + time_gpu_frotate)
             colormax = gather(max(abs(MAT_GPU_ROT),[],'all'));
+            gpudata.rfdata = gpuArray(double(gpudata.rfdata));
 
             nexttile; imagesc(MAT_GPU_ROT); colormap(pucolors.seismic); clim([-colormax colormax]) 
             end
@@ -130,29 +131,8 @@ MAT_GPU_ROT = DAS_frame_rotate(gpudata, squarea, sensarr, 9.1, false);
 MAT_VEC_IMG = DAS_index(data,ind_mat);
             time_matlab_vec = toc;
             disp("DAS Indexing (Matlab Fully Vectorized) time: " + time_matlab_vec)
-
-            switch ind_mat.type
-                case "Index2D"
                 
-                nexttile; imagesc(abs(MAT_VEC_IMG)); colormap(pucolors.purplebone);
-            
-                case "Index3D"
-                
-                max_intens = max(abs(MAT_VEC_IMG),[],'all'); 
-                num_intspts = 10;
-                intens_scale = max_intens/num_intspts:max_intens/num_intspts:max_intens;
-                alpha = (0:num_intspts-1)./num_intspts;
-                alpha = 100.^(alpha);
-                alpha = alpha./max(alpha);
-
-                queryPoints = linspace(min(intens_scale),max(intens_scale),256);
-                alphamap = interp1(intens_scale,alpha,queryPoints)';
-
-
-view        = viewer3d(BackgroundColor="white", BackgroundGradient=false, Lighting="off");
-            volshow(abs(MAT_VEC_IMG), Alphamap=alphamap, Parent=view);
-
-            end
+            nexttile; imagesc(abs(MAT_VEC_IMG)); colormap(pucolors.purplebone);
             
             end
             
@@ -160,6 +140,8 @@ view        = viewer3d(BackgroundColor="white", BackgroundGradient=false, Lighti
             if ind_mat_halfvec
 antiphase(1,1,:) = uint32(2125*(0:511));
 non_phased_M = ind_mat.M - antiphase;
+non_phased_M(non_phased_M <= 0) = 1;
+
             tic;
 MAT_HALF_IMG= DAS_half_vec_loop(data, non_phased_M);
             time_matlab_halfvec = toc;
@@ -172,6 +154,7 @@ MAT_HALF_IMG= DAS_half_vec_loop(data, non_phased_M);
             if ind_mat_element
 antiphase(1,1,:) = uint32(2125*(0:511));
 non_phased_M = ind_mat.M - antiphase;
+non_phased_M(non_phased_M <= 0) = 1;
             tic;
 MAT_ELE_IMG = DAS_elementalLoop(data, non_phased_M);
             time_matlab_elem = toc;
@@ -182,7 +165,7 @@ MAT_ELE_IMG = DAS_elementalLoop(data, non_phased_M);
 
             %% Run indexing via C MEX function:
             if ind_c
-mat         = ind_mat.M - 1; %because C is zero-indexed
+mat         = ind_mat.M - 1; %because C++ is zero-indexed
             
             tic
 C_IMAGE     = dasindex(mat, data.rfdata);
@@ -193,6 +176,7 @@ nexttile; imagesc(abs(C_IMAGE)); colormap(pucolors.cvidis);
 
             %% Run indexing function on GPU
             if ind_gpu_mat
+            tic
 MAT_GPU_IMG = DAS_GPU_index(gpudata, gind_mat);
             nvidiaDev.wait();
             time_gpu = toc;
@@ -203,14 +187,14 @@ MAT_GPU_IMG = DAS_GPU_index(gpudata, gind_mat);
 
             %% Run indexing function on CUDA GPU
             if ind_gpu_cuda
-smat        = gind_mat.M-1; % again, because C is zero-indexed
+smat        = gind_mat-1; % again, because C is zero-indexed
             nvidiaDev.wait(); %wait for the subtraction to end on all threads
 
             tic
 CUDA_IMG    = CUDA_DAS_index(smat, gpudata.rfdata);
             time_cuda = toc; disp("GPU (CUDA) performance: " + time_cuda);
             % no nvidiaDev.wait() function necessary here; CUDA_DAS_index
-            % includes the cuda device synchronization calrfdata      = mxGPUCreateFromMxArray(prhs[1]);ls.
+            % includes the cuda device synchronization call.
 
             nexttile; imagesc(abs(CUDA_IMG)); colormap(pucolors.cvidis);
             end
@@ -228,7 +212,7 @@ MAT_MUL_IMG = DAS_mmult(data, mult_mat, squarea);
             %% Run mmult DAS function on GPU
             if mmt_gpu_matlab
             tic
-MAT_MUL_GPU = DAS_mmult(gpudata,gmul_mat,squarea);
+MAT_MUL_GPU = DAS_mmult(gpudata, gmul_mat, squarea);
             nvidiaDev.wait();
             time_mmult_gpu = toc;
             disp("GPU MMULT Time: " + time_mmult_gpu)

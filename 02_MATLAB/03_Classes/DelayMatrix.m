@@ -2,8 +2,9 @@ classdef DelayMatrix
 % Delay Matrix class
 
     properties
-        M           % the delay matrix
-        type        % an indicator for some of the DAS algorithms
+        M           % a Delay matrix, in units of indices to delay.
+        type        % they type of Delay Matrix
+        Time        % how long it took to make the Delay Matrix
     end
     
     properties (Access = private)
@@ -26,19 +27,54 @@ classdef DelayMatrix
     methods
     
         function obj = DelayMatrix(sensor_array, image_area, dataset, version, interp)
-        % constructor - generates a delay matrix of several types
+        % obj = DelayMatrix(sensor_array, image_area, dataset, version, interp)
+        %
+        % Generates a Delay Matrix (one of several types) based on the Distance Formula for every
+        % pixel location specified by image_area to every transducer
+        % location specified in sensor_array.
+        %
+        %   Inputs:
+        %       - sensor_array: A SensorArray object containing the
+        %           locations of your transducers.
+        %       - image_area: An ImageArea object containing the locations
+        %           of the desired image pixels
+        %       - dataset: A Dataset object containing rfdata and some
+        %           other parameters
+        %       - version (optional, default "index"): a string/character
+        %           to specify which delay and sum schema this delay matrix
+        %           is for. It can be "index", for DAS by indexing,
+        %           "matrix" for DAS by sparse matrix multiplication, or
+        %           "perspectiverotate" for delay matrix rotation DAS on a
+        %           circular array.
+        %       - interp (optional, default false): a bool true or false,
+        %           specifying whether or not to interpolate between indices in
+        %           the Delay Matrix. Iterpolation reduces computational
+        %           time, but increases image fidelity slightly
+        %
+        %   Output:
+        %       - obj.M: the delay matrix
+        %       - obj.type: the type of delay matrix specified in 'version'
 
-            switch nargin
-                case {0 1 2}; error("Not Enough Input Arguments")
-                case 3; version = 'index'; obj.interpolate = false;
-                case 4; obj.interpolate = false;
-                case 5; obj.interpolate = interp;
-                otherwise; error("Too many input arguments");
+            arguments 
+                sensor_array (1,1) SensorArray
+                image_area (1,1) ImageArea
+                dataset (1,1) Dataset
+                version string {mustBeTextScalar, mustBeMember(version, ["index" "matrix" "perspectiverotate"])} = "index"
+                interp (1,1) logical = false
             end
 
+            tic;
+
+            %Set class properties
+            obj.type            = version;
+            obj.interpolate   = interp;
             obj.sens          = sensor_array;
             obj.img           = image_area;
             obj.data          = dataset;
+            
+            %Run the subroutine that calculates delays based on sensor
+            %array positions:
+            obj                 = obj.distance_formula;
     
             switch version
                 case "matrix"; obj = obj.delay_matrix_mmult;
@@ -48,6 +84,8 @@ classdef DelayMatrix
                     error("Unrecognized version argument. Acceptable options are: 'matrix', 'index' (default), or 'PerspectiveRotate'");
             end
     
+            obj.Time = toc;
+
         end
     
     end
@@ -58,14 +96,13 @@ classdef DelayMatrix
         function obj = distance_formula(obj)
             
             % Get the sensor array dimensions
-            lxar                = length(imagearea.x_arr);
-            lx0                 = length(obj.sens.x0);
-            lyar                = length(imagearea.y_arr);
-            lz0                 = length(obj.sens.z0);
-    
+            lxar                = obj.img.image_size(1);
+            lyar                = obj.img.image_size(2);
+            n_sens              = obj.sens.nSensors;
+            
             % Argument checking for sizes
-            ray_bytes   = (lxar*lx0 + lyar*lz0)*8;
-            allr_bytes  = lxar*lyar*lx0*2*8;
+            ray_bytes   = ((lxar + lyar)*n_sens)*8;
+            allr_bytes  = lxar*lyar*n_sens*2*8;
             gb          = 2^30;
     
             % If the matrix is larger than 20 GB, ask the user if they want
@@ -77,16 +114,16 @@ classdef DelayMatrix
             end
     
             % Calculate the delay matrix/indices
-            xray(1,:,:)         = imagearea.x_arr*ones(1, lx0)-ones(lxar,1)*obj.sens.x0;
-            yray(:,1,:)         = imagearea.y_arr*ones(1, lz0)-ones(lyar,1)*obj.sens.z0;
-            obj.delays= hypot(repmat(xray,lyar,1,1), repmat(yray,1,lxar,1)).*(1/obj.data.c/obj.data.dt);
+            xray(1,:,:)         = obj.img.x_arr*ones(1, n_sens)-ones(lxar,1)*obj.sens.x0;
+            yray(:,1,:)         = obj.img.y_arr*ones(1, n_sens)-ones(lyar,1)*obj.sens.z0;
+            obj.delays          = hypot(repmat(xray,lyar,1,1), repmat(yray,1,lxar,1)).*(1/obj.data.c/obj.data.dt);
     
         end
     
         function obj = delay_matrix_mmult(obj)
                             
             obj.type = "mmult";
-            flrays   = floor(obj.delays);
+            flrays   = cast(floor(obj.delays), 'uint32');
     
             % Get the row numbers (which simply repeats the sequence of 1:(lyar*lxar) lx0 times)
             I                   = flrays <= 0 & flrays > obj.data.frame_size;
@@ -116,10 +153,10 @@ classdef DelayMatrix
 
             switch obj.data.pulse_ind
                 case 0
-                obj.delays = obj.delays.*(1/obj.data.c/obj.data.dt);
+                obj.delays = obj.delays;
     
                 otherwise
-                obj.delays = obj.delays.*(1/obj.data.c/obj.data.dt) + obj.data.pulse_ind;
+                obj.delays = obj.delays + obj.data.pulse_ind;
             end
     
             obj.delays = cast(obj.delays,'uint32');

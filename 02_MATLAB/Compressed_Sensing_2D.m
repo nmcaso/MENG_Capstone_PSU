@@ -3,7 +3,7 @@
             for pth = strtrim(string(ls))'; if isfolder(pth); addpath(pth); end; end
            
 n_avgs      = 1;
-demo        = false;
+demo        = true;
 
 compression_ratio_time = 0.8;
 compression_ratio_space = 0.5;

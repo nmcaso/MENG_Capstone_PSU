@@ -8,7 +8,7 @@ function img_arr = DAS_index(dataset,delaymatrix)
 
     % this is the most vectorized version of the function on the CPU in MATLAB
     switch delaymatrix.type
-        case "Index2D"
+        case "index"
         img_arr     = sum(dataset.rfdata(delaymatrix.M),3);
         otherwise
         error("Wrong DAS function for this type of index matrix!")

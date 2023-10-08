@@ -9,8 +9,12 @@ function img_arr = DAS_mmult(dataset,delaymatrix,imagearea)
 %Use the Dataset, IndexMatrix, and ImageArea classes to generate the
 %inputs.
 
-finalsize       = [length(imagearea.x_arr) length(imagearea.y_arr)];        % Get the reshaping dimensions.
-img_arr         = delaymatrix.M*dataset.rfdata(:);                          % Index by sparse matrix multiplication into a flat array
-img_arr         = reshape(img_arr,finalsize);                               % Reshape the image to a 2D array
+if isa(delaymatrix, "DelayMatrix")
+    img_arr         = delaymatrix.M*dataset.rfdata(:);                     % Index by sparse matrix multiplication into a flat array
+else
+    img_arr         = delaymatrix*dataset.rfdata(:);                       % same thing if the user put the M matrix itself into the delaymatrix input argument
+end
+
+img_arr         = reshape(img_arr,imagearea.image_size);                   % Reshape the image to a 2D array
 
 end
