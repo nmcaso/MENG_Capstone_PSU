@@ -59,7 +59,7 @@ classdef DelayMatrix
                 sensor_array (1,1) SensorArray
                 image_area (1,1) ImageArea
                 dataset (1,1) Dataset
-                version string {mustBeTextScalar, mustBeMember(version, ["index" "matrix" "perspectiverotate"])} = "index"
+                version string {mustBeTextScalar, mustBeMember(version, ["index" "c++" "matrix" "frequencydomain" "perspectiverotate"])} = "index"
                 interp (1,1) logical = false
             end
 
@@ -67,10 +67,10 @@ classdef DelayMatrix
 
             %Set class properties
             obj.type            = version;
-            obj.interpolate   = interp;
-            obj.sens          = sensor_array;
-            obj.img           = image_area;
-            obj.data          = dataset;
+            obj.interpolate     = interp;
+            obj.sens            = sensor_array;
+            obj.img             = image_area;
+            obj.data            = dataset;
             
             %Run the subroutine that calculates delays based on sensor
             %array positions:
@@ -78,10 +78,11 @@ classdef DelayMatrix
     
             switch version
                 case "matrix"; obj = obj.delay_matrix_mmult;
-                case "index"; obj = obj.delay_matrix_indexing;
+                case {"index" "c++"}; obj = obj.delay_matrix_indexing;
+                case "frequencydomain"; obj = obj.delay_matrix_fd;
                 case "PerspectiveRotate"; obj = obj.delay_matrix_rotate;
                 otherwise
-                    error("Unrecognized version argument. Acceptable options are: 'matrix', 'index' (default), or 'PerspectiveRotate'");
+                    error("Unrecognized version argument. Acceptable options are: 'matrix', 'c++', 'index' (default), or 'PerspectiveRotate'");
             end
     
             obj.Time = toc;
@@ -114,12 +115,18 @@ classdef DelayMatrix
             end
     
             % Calculate the delay matrix/indices
-            xray(1,:,:)         = obj.img.x_arr*ones(1, n_sens)-ones(lxar,1)*obj.sens.x0;
-            yray(:,1,:)         = obj.img.y_arr*ones(1, n_sens)-ones(lyar,1)*obj.sens.z0;
-            obj.delays          = hypot(repmat(xray,lyar,1,1), repmat(yray,1,lxar,1)).*(1/obj.data.c/obj.data.dt);
+            xray(1,:,:)         = obj.img.x_arr*ones(1, n_sens) - ones(lxar,1)*obj.sens.x0;
+            yray(:,1,:)         = obj.img.y_arr*ones(1, n_sens) - ones(lyar,1)*obj.sens.z0;
+
+            switch obj.type
+                case "frequencydomain"
+                    obj.delays          = hypot(repmat(xray,lyar,1,1), repmat(yray,1,lxar,1)).*(1/obj.data.c);
+                otherwise
+                    obj.delays          = hypot(repmat(xray,lyar,1,1), repmat(yray,1,lxar,1)).*(1/obj.data.c/obj.data.dt);
+            end
     
         end
-    
+
         function obj = delay_matrix_mmult(obj)
                             
             obj.type = "mmult";
@@ -161,6 +168,10 @@ classdef DelayMatrix
     
             obj.delays = cast(obj.delays,'uint32');
             obj.M = obj.delays + obj.index_phase;
+            switch obj.type
+                case "c++"
+                    obj.M = obj.M - 1;
+            end
             obj.M (obj.M > numel(obj.data.rfdata)) = numel(obj.data.rfdata);
             obj.M (obj.M < 1) = 1;
 
@@ -213,6 +224,16 @@ classdef DelayMatrix
 
         end
 
+        function obj = delay_matrix_fd(obj)
+
+            obj.M = obj.delays;
+            switch obj.type
+                case "c++"
+                    obj.M = obj.M - 1;
+            end
+
+        end
+
     end
 
     methods
@@ -220,7 +241,7 @@ classdef DelayMatrix
        function val = get.index_phase(delay_mat_obj)
 
             val(1,:,:)      = (0:size(delay_mat_obj.data.rfdata,2)-1)*(size(delay_mat_obj.data.rfdata,1));
-            val             = repmat(val, length(delay_mat_obj.img.x_arr), length(delay_mat_obj.img.y_arr), 1);
+            val             = repmat(val, delay_mat_obj.img.image_size(2), delay_mat_obj.img.image_size(1), 1);
             val             = cast(val, 'uint32');
 
        end

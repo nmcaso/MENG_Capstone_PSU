@@ -45,6 +45,7 @@ methods
                 else
                     obj.z_arr = [];
                 end
+                
             case 6 % or the user may list them all out as arguments
                 obj.x_arr = double(xmin:xres:xmax).';
                 obj.y_arr = double(ymin:yres:ymax).';
@@ -71,11 +72,11 @@ methods
     end
 
     function imsz = get.image_width(obj)
-        imsz = abs(obj.x_arr(end) - obj.x_arr(1))./obj.resolution(1);
+        imsz = length(obj.x_arr)*obj.resolution(1);
     end
 
     function imsz = get.image_height(obj)
-        imsz = abs(obj.y_arr(end) - obj.y_arr(1))./obj.resolution(2);
+        imsz = length(obj.y_arr)*obj.resolution(2);
     end
 end
 

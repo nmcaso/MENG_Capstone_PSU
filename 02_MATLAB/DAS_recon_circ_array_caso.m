@@ -1,20 +1,21 @@
             %% Setup
+            cd("C:\Users\cason\OneDrive\Documents\PSU\Project\02_MATLAB");
             clear; clc; close all;
             for ii = strtrim(string(ls))'; if isfolder(ii); addpath(ii); end; end
 
             % Select the things to run:
-c_img           = true;
-mex_original    = true;
-framerotate     = true;
-framerotate_gpu = true;
+c_img           = false;
+mex_original    = false;
+framerotate     = false;
+framerotate_gpu = false;
 ind_mat_vec     = true;
-ind_mat_element = true;
-ind_mat_halfvec = true;
+ind_mat_element = false;
+ind_mat_halfvec = false;
 ind_c           = true;
-ind_gpu_mat     = true;
-ind_gpu_cuda    = true;
-mmt_matlab      = true;
-mmt_gpu_matlab  = true;
+ind_gpu_mat     = false;
+ind_gpu_cuda    = false;
+mmt_matlab      = false;
+mmt_gpu_matlab  = false;
 
 compute_averages= false;
 nicerplots      = false;
@@ -37,17 +38,17 @@ numimgs         = sum(switches);
             %% Compile MEX function(s) if desired
             if compile_c_mex
 folder      = pwd;
-copyfile([folder(1:46) '03_C++\MEX Functions\DAS_Index.c'])
-             mex "DAS_Index.c" -I"C:\Program Files\MATLAB\R2022b\extern\include" COPTIMFLAGS="-fwrapv" -output dasindex
+copyfile("..\03_C++\MEX Functions\DAS_Index.c")
+            mex "DAS_Index.c" -I"C:\Program Files\MATLAB\R2023b\extern\include" COPTIMFLAGS="-fwrapv" -output dasindex
             end
             if compile_mex_or
 folder      = pwd;
-copyfile([folder(1:46) '03_C++\MEX Functions\DAS_Index_Original.cpp'])
-            mex "DAS_Index_Original.cpp" -I"C:\Program Files\MATLAB\R2022b\extern\include" COPTIMFLAGS="-O3 -fwrapv" -output dasindex_original
+copyfile("..\03_C++\MEX Functions\DAS_Index_Original.cpp")
+            mex "DAS_Index_Original.cpp" -I"C:\Program Files\MATLAB\R2023b\extern\include" COPTIMFLAGS="-O3 -fwrapv" -output dasindex_original
             end
             if compile_cuda_mex
 folder      = pwd;
-copyfile([folder(1:46) '03_C++\MEX Functions\gpudasindex.cu'])
+copyfile("..\03_C++\MEX Functions\gpudasindex.cu")
             mexcuda "gpudasindex.cu" COPTIMFLAGS="-O3 -fwrapv" -output CUDA_DAS_index
             end
 
@@ -67,7 +68,7 @@ mdl.yres    = mdl.xres;                 mdl.ymax    = mdl.xmax;
 squarea     = ImageArea(mdl);
 
             if any(switches(1:8))
-ind_mat     = DelayMatrix(sensarr, squarea, data, "index", interpolt); 
+ind_mat     = DelayMatrix(sensarr, squarea, data, "index", "C", interpolt); 
             disp("Time to make Index Matrix: " + ind_mat.Time)
             end
 
@@ -76,7 +77,7 @@ gpudata     = data.gpuDataSet;
 gind_mat    = ind_mat.M_gpu;
             end
             if mmt_matlab || compute_averages
-mult_mat    = DelayMatrix(sensarr,squarea,data,"matrix", interpolt); disp("Time to make MMT Matrix: " + mult_mat.Time);
+mult_mat    = DelayMatrix(sensarr,squarea,data,"matrix", "C", interpolt); disp("Time to make MMT Matrix: " + mult_mat.Time);
             end
             if mmt_gpu_matlab || compute_averages
 gmul_mat    = mult_mat.M_gpu;
@@ -165,10 +166,11 @@ MAT_ELE_IMG = DAS_elementalLoop(data, non_phased_M);
 
             %% Run indexing via C MEX function:
             if ind_c
-mat         = ind_mat.M - 1; %because C++ is zero-indexed
+imat        = ind_mat.M-1;
+dt          = data.rfdata;
             
             tic
-C_IMAGE     = dasindex(mat, data.rfdata);
+C_IMAGE     = dasindex(imat, dt);
             time_c = toc; disp("DAS Index in C: " + time_c)
 
 nexttile; imagesc(abs(C_IMAGE)); colormap(pucolors.cvidis);

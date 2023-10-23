@@ -11,33 +11,33 @@ end
 
 properties (Dependent)
     frame_size
+    n_frames
 end
 
 methods
     
-    function obj = Dataset(filepath,pulse_ind)
+    function obj = Dataset(filepath, pulse_ind, type)
     %Constructor - load the dataset
 
-        switch class(filepath) 
-            case "string"
-            load(filepath,'fs','sos','rfdata') %load the file
-            case 'char'
-            load(string(filepath),'fs','sos','rfdata')
-            otherwise
-            warning("Error: file path must lead to a valid dataset .mat file")
+        arguments
+            filepath string {mustBeFile}
+            pulse_ind (1,1) {mustBeScalarOrEmpty} = 0
+            type string {mustBeMember(type, ["time" "frequency"])} = "time"
         end
 
-        if nargin == 1; pulse_ind = 0; end
+        load(filepath,'fs','sos','rfdata') %load the file
         
-        try %import the variables from the data file
+        if ~exist('fs','var'); error("Data file missing sample rate fs"); end
+        if ~exist('sos','var'); error("Data file missing speed of sound sos"); end
+        if ~exist('rfdata', 'var'); error("Data file is missing rfdata matrix"); end
+
+        
         obj.fs      = fs;
         obj.dt      = 1/(fs*1e6);
         obj.c       = sos*1000;
         obj.rfdata  = rfdata./size(rfdata,2);
         obj.pulse_ind = pulse_ind;
-        catch
-        error("Something was wrong with one of the variables. Please check the dataset file.")
-        end
+        
     end
 
     function obj = gpuDataSet(obj)
@@ -55,11 +55,21 @@ methods
 
 end
 
-%get methods for dependent properties
+%set/get methods for properties
 methods
     
+    function obj = set.fs(obj, inp)
+
     function frsize = get.frame_size(obj)
         frsize = size(obj.rfdata,1);
+    end
+
+    function nfr = get.n_frames(obj)
+        if numel(size(obj.rfdata)) == 2
+            nfr = 1;
+        elseif numel(size(obj.rfdata)) == 3
+            nfr = size(obj.rfdata,3);
+        end
     end
 
 end

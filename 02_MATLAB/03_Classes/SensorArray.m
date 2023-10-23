@@ -2,8 +2,8 @@ classdef SensorArray
 %Sensor Array object
 
 properties
-    x0      % x-coordinates of the transducers
-    z0      % y-coordinates of the transducers (with naming convention of the y axis being depth)
+    x0      =[] % x-coordinates of the transducers
+    z0      =[] % y-coordinates of the transducers (with naming convention of the y axis being depth)
 end
 
 properties (Dependent)
@@ -19,14 +19,16 @@ methods
         % Input Checks
         switch class(filepath)
             case {'string' 'char'}
-                load(string(filepath),'z0','x0');
+                load(string(filepath),'x0','z0');
             otherwise
             error("File path is not a string that points to a dataset .mat file");
         end
 
         % Convert from mm to meters
         obj.x0  = x0(:).'*1e-3;
-        obj.z0  = z0(:).'*1e-3;
+        if exist("z0",'var')
+            obj.z0  = z0(:).'*1e-3;
+        end
 
         % Correct faulty sensors
         faulty = abs(diff(obj.x0)) > 8*mean(obj.x0 + 1) - 1;
@@ -50,10 +52,10 @@ end
 methods
     
     function nsens = get.nSensors(obj)
-        if min(size(obj.z0)) > 1
-            nsens = size(obj.z0);
+        if min(size(obj.x0)) > 1
+            nsens = size(obj.x0);
         else
-            nsens = length(obj.z0);
+            nsens = length(obj.x0);
         end
     end
 
